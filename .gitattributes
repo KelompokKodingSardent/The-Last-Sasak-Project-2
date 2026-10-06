@@ -1,0 +1,22 @@
+# 3D Models & Animations (Sering di-tweak & re-export dari software 3D)
+*.fbx filter=lfs diff=lfs merge=lfs -text
+*.blend filter=lfs diff=lfs merge=lfs -text
+*.obj filter=lfs diff=lfs merge=lfs -text
+*.max filter=lfs diff=lfs merge=lfs -text
+
+# Lighting & Bake Data (Ukurannya raksasa dan berubah setiap kali kamu nge-bake ulang scene)
+*.exr filter=lfs diff=lfs merge=lfs -text
+*.hdr filter=lfs diff=lfs merge=lfs -text
+*.ies filter=lfs diff=lfs merge=lfs -text
+*GI.exr filter=lfs diff=lfs merge=lfs -text
+
+# Audio Files (Jika sering iterasi sound effects/BGM)
+*.wav filter=lfs diff=lfs merge=lfs -text
+*.ogg filter=lfs diff=lfs merge=lfs -text
+*.mp3 filter=lfs diff=lfs merge=lfs -text
+
+# Compiled Binaries & Plugins (Berubah saat update library pihak ketiga)
+*.dll filter=lfs diff=lfs merge=lfs -text
+*.pdb filter=lfs diff=lfs merge=lfs -text
+*.so filter=lfs diff=lfs merge=lfs -text
+*.a filter=lfs diff=lfs merge=lfs -text
