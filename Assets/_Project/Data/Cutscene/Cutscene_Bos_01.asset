@@ -14,77 +14,94 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CutsceneSequence
   sequenceSteps:
   - actionType: 0
-    waitForCompletion: 0
+    waitForCompletion: 1
     cameraID: Kamera_Bos
     waitTime: 5
-    speakerName: ra
+    speakerName: RAKA
+    dialogueText: 
+    actorCommands:
+    - actorName: denji
+      expression: {fileID: 21300000, guid: ba9f354034f876b4ab18a969cdabf86a, type: 3}
+      slot: 1
+      isTalking: 1
+    - actorName: RUCSONNU
+      expression: {fileID: 21300000, guid: 59ed004f5943a184185e5467fcba0344, type: 3}
+      slot: 5
+      isTalking: 0
+  - actionType: 1
+    waitForCompletion: 1
+    cameraID: Kamera_Bos
+    waitTime: 5
+    speakerName: KEANU
     dialogueText: DADANG
     actorCommands:
     - actorName: denji
-      expression: {fileID: 0}
+      expression: {fileID: 21300000, guid: ba9f354034f876b4ab18a969cdabf86a, type: 3}
+      slot: 1
+      isTalking: 0
+    - actorName: RUCSONNU
+      expression: {fileID: 21300000, guid: 59ed004f5943a184185e5467fcba0344, type: 3}
+      slot: 5
+      isTalking: 1
+  - actionType: 1
+    waitForCompletion: 1
+    cameraID: Kamera_Bos
+    waitTime: 5
+    speakerName: KEANU
+    dialogueText: 'HEY, HEY. CHILL CHILL.
+
+      ITS ME, '
+    actorCommands:
+    - actorName: denji
+      expression: {fileID: 21300000, guid: ba9f354034f876b4ab18a969cdabf86a, type: 3}
+      slot: 1
+      isTalking: 0
+    - actorName: RUCSONNU
+      expression: {fileID: 21300000, guid: 59ed004f5943a184185e5467fcba0344, type: 3}
+      slot: 5
+      isTalking: 1
+  - actionType: 1
+    waitForCompletion: 1
+    cameraID: Kamera_Bos
+    waitTime: 5
+    speakerName: RAKA
+    dialogueText: OHHHH, MY DOG!!
+    actorCommands:
+    - actorName: denji
+      expression: {fileID: 21300000, guid: ba9f354034f876b4ab18a969cdabf86a, type: 3}
       slot: 1
       isTalking: 1
-    - actorName: asdad
-      expression: {fileID: 0}
+    - actorName: RUCSONNU
+      expression: {fileID: 21300000, guid: 59ed004f5943a184185e5467fcba0344, type: 3}
       slot: 5
       isTalking: 0
   - actionType: 1
     waitForCompletion: 1
     cameraID: Kamera_Bos
     waitTime: 5
-    speakerName: ra
-    dialogueText: DADANG
+    speakerName: RAKA
+    dialogueText: AI SIA KUNAON!?
     actorCommands:
     - actorName: denji
-      expression: {fileID: 0}
+      expression: {fileID: 21300000, guid: ba9f354034f876b4ab18a969cdabf86a, type: 3}
       slot: 1
       isTalking: 1
-    - actorName: 
-      expression: {fileID: 0}
+    - actorName: RUCSONNU
+      expression: {fileID: 21300000, guid: 59ed004f5943a184185e5467fcba0344, type: 3}
       slot: 5
       isTalking: 0
-  - actionType: 1
-    waitForCompletion: 1
-    cameraID: Kamera_Bos
-    waitTime: 5
-    speakerName: ra
-    dialogueText: papang
-    actorCommands:
-    - actorName: denji
-      expression: {fileID: 0}
-      slot: 1
-      isTalking: 1
-    - actorName: 
-      expression: {fileID: 0}
-      slot: 5
-      isTalking: 0
-  - actionType: 1
-    waitForCompletion: 1
-    cameraID: Kamera_Bos
-    waitTime: 5
-    speakerName: sadsadasd
-    dialogueText: srhhdghkjfdtsrghdr
-    actorCommands:
-    - actorName: denji
-      expression: {fileID: 0}
-      slot: 1
-      isTalking: 0
-    - actorName: asdad
-      expression: {fileID: 0}
-      slot: 5
-      isTalking: 1
   - actionType: 3
     waitForCompletion: 0
     cameraID: Player
     waitTime: 5
-    speakerName: ra
-    dialogueText: DADANG
+    speakerName: KEANU
+    dialogueText: AI SIA KUNAON!?
     actorCommands:
     - actorName: denji
-      expression: {fileID: 0}
+      expression: {fileID: 21300000, guid: ba9f354034f876b4ab18a969cdabf86a, type: 3}
       slot: 1
-      isTalking: 1
-    - actorName: 
-      expression: {fileID: 0}
-      slot: 5
       isTalking: 0
+    - actorName: RUCSONNU
+      expression: {fileID: 21300000, guid: 59ed004f5943a184185e5467fcba0344, type: 3}
+      slot: 5
+      isTalking: 1
