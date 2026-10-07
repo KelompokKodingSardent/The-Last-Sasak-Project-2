@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(CharacterController))]
 public class PlayerMovement : MonoBehaviour
@@ -6,11 +7,11 @@ public class PlayerMovement : MonoBehaviour
     [Header("Movement Settings")]
     public float moveSpeed = 8f;
     public float turnSmoothTime = 0.1f;
-    
+
     [Header("Gravity")]
     public float gravity = -9.81f;
-    private float velocityY;
 
+    private float velocityY;
     private CharacterController controller;
     private Transform camTransform;
     private float turnSmoothVelocity;
@@ -18,15 +19,17 @@ public class PlayerMovement : MonoBehaviour
     private void Start()
     {
         controller = GetComponent<CharacterController>();
-        
-        // Mengambil referensi rotasi kamera utama agar arah gerak sinkron dengan layar
+
+        // Ambil referensi kamera utama
         if (Camera.main != null)
         {
             camTransform = Camera.main.transform;
         }
         else
         {
-            Debug.LogError("Main Camera tidak ditemukan! Pastikan kamera memiliki tag 'MainCamera'.");
+            Debug.LogError(
+                "Main Camera tidak ditemukan! Pastikan kamera memiliki tag 'MainCamera'."
+            );
         }
     }
 
@@ -37,36 +40,86 @@ public class PlayerMovement : MonoBehaviour
 
     private void MovePlayer()
     {
-        // 1. Ambil input dari WASD atau Analog (Nilai -1 hingga 1)
-        float horizontal = Input.GetAxisRaw("Horizontal");
-        float vertical = Input.GetAxisRaw("Vertical");
-        
-        // Vektor arah input murni
-        Vector3 direction = new Vector3(horizontal, 0f, vertical).normalized;
+        // =========================================
+        // 1. INPUT WASD - INPUT SYSTEM BARU
+        // =========================================
 
-        if (direction.magnitude >= 0.1f)
+        float horizontal = 0f;
+        float vertical = 0f;
+
+        if (Keyboard.current != null)
         {
-            // 2. Kalkulasi sudut putar karakter berdasarkan input + rotasi kamera
-            float targetAngle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg + camTransform.eulerAngles.y;
-            
-            // 3. Efek rotasi yang mulus (smooth) pada model karakter
-            float angle = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetAngle, ref turnSmoothVelocity, turnSmoothTime);
-            transform.rotation = Quaternion.Euler(0f, angle, 0f);
+            if (Keyboard.current.aKey.isPressed)
+                horizontal = -1f;
 
-            // 4. Ubah sudut putar tadi menjadi vektor arah gerak (maju)
-            Vector3 moveDir = Quaternion.Euler(0f, targetAngle, 0f) * Vector3.forward;
-            
-            // Gerakkan karakter
-            controller.Move(moveDir.normalized * moveSpeed * Time.deltaTime);
+            if (Keyboard.current.dKey.isPressed)
+                horizontal = 1f;
+
+            if (Keyboard.current.sKey.isPressed)
+                vertical = -1f;
+
+            if (Keyboard.current.wKey.isPressed)
+                vertical = 1f;
         }
 
-        // 5. Terapkan Gravitasi (agar karakter tidak melayang saat melewati turunan/tangga)
+        // =========================================
+        // 2. ARAH GERAK
+        // =========================================
+
+        Vector3 direction = new Vector3(horizontal, 0f, vertical).normalized;
+
+        if (direction.magnitude >= 0.1f && camTransform != null)
+        {
+            // =========================================
+            // 3. HITUNG ROTASI BERDASARKAN KAMERA
+            // =========================================
+
+            float targetAngle =
+                Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg
+                + camTransform.eulerAngles.y;
+
+            // =========================================
+            // 4. ROTASI PLAYER SMOOTH
+            // =========================================
+
+            float angle = Mathf.SmoothDampAngle(
+                transform.eulerAngles.y,
+                targetAngle,
+                ref turnSmoothVelocity,
+                turnSmoothTime
+            );
+
+            transform.rotation = Quaternion.Euler(0f, angle, 0f);
+
+            // =========================================
+            // 5. GERAK PLAYER
+            // =========================================
+
+            Vector3 moveDir =
+                Quaternion.Euler(0f, targetAngle, 0f)
+                * Vector3.forward;
+
+            controller.Move(
+                moveDir.normalized
+                * moveSpeed
+                * Time.deltaTime
+            );
+        }
+
+        // =========================================
+        // 6. GRAVITASI
+        // =========================================
+
         if (controller.isGrounded && velocityY < 0)
         {
-            velocityY = -2f; // Nilai kecil agar tetap menempel di tanah
+            velocityY = -2f;
         }
 
         velocityY += gravity * Time.deltaTime;
-        controller.Move(new Vector3(0, velocityY, 0) * Time.deltaTime);
+
+        controller.Move(
+            new Vector3(0f, velocityY, 0f)
+            * Time.deltaTime
+        );
     }
 }
