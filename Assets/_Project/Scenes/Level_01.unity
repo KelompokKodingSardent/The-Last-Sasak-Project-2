@@ -183,8 +183,8 @@ Camera:
   near clip plane: 0.3
   far clip plane: 1000
   field of view: 60.000004
-  orthographic: 0
-  orthographic size: 5
+  orthographic: 1
+  orthographic size: 16
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -209,7 +209,7 @@ Transform:
   m_GameObject: {fileID: 186571252}
   serializedVersion: 2
   m_LocalRotation: {x: 0.35355338, y: 0.35355338, z: -0.1464466, w: 0.8535535}
-  m_LocalPosition: {x: -7.0120306, y: 15, z: -10.49}
+  m_LocalPosition: {x: -12.012031, y: 20, z: -15.49}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -412,7 +412,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: e5239731ccabad945aeb6b42f167ba3e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1685133602}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e5239731ccabad945aeb6b42f167ba3e, type: 3}
       insertIndex: -1
@@ -420,6 +423,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e5239731ccabad945aeb6b42f167ba3e, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1290495646}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e5239731ccabad945aeb6b42f167ba3e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1290495650}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e5239731ccabad945aeb6b42f167ba3e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1290495649}
   m_SourcePrefab: {fileID: 100100000, guid: e5239731ccabad945aeb6b42f167ba3e, type: 3}
 --- !u!1 &1184606466
 GameObject:
@@ -490,7 +499,7 @@ Transform:
   m_GameObject: {fileID: 1184606466}
   serializedVersion: 2
   m_LocalRotation: {x: -0.086935915, y: 0.42540345, z: -0.041098088, w: -0.8998806}
-  m_LocalPosition: {x: 12.574, y: 4.808, z: -11.157}
+  m_LocalPosition: {x: 29.5, y: 54.41, z: 7.54}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -546,6 +555,40 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: e5239731ccabad945aeb6b42f167ba3e, type: 3}
   m_PrefabInstance: {fileID: 824342347}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1290495649
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1290495645}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd7ffd81bca012745a059a895b17aaf5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerAttack
+  attackPoint: {fileID: 1685133602}
+  attackRange: 1.2
+  enemyLayers:
+    serializedVersion: 2
+    m_Bits: 8
+  attackDamage: 25
+  attackRate: 2
+--- !u!114 &1290495650
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1290495645}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f3a4e046c0a295d438baad4c29aae31d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerHealth
+  maxHealth: 100
+  currentHealth: 0
+  hitShakeForce: 3
 --- !u!1 &1310740641
 GameObject:
   m_ObjectHideFlags: 0
@@ -642,8 +685,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1310740641}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.5547, y: -0, z: -7.04181}
+  m_LocalRotation: {x: -0, y: -0, z: 0.0000000037252899, w: 1}
+  m_LocalPosition: {x: -1.554699, y: 0, z: -7.04181}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -932,7 +975,7 @@ MonoBehaviour:
     CustomLookAtTarget: 0
   Lens:
     FieldOfView: 60.000004
-    OrthographicSize: 5
+    OrthographicSize: 16
     NearClipPlane: 0.3
     FarClipPlane: 1000
     Dutch: 0
@@ -959,7 +1002,7 @@ Transform:
   m_GameObject: {fileID: 1660232237}
   serializedVersion: 2
   m_LocalRotation: {x: 0.35355338, y: 0.35355338, z: -0.1464466, w: 0.8535535}
-  m_LocalPosition: {x: -7.0120306, y: 15, z: -10.49}
+  m_LocalPosition: {x: -12.012031, y: 20, z: -15.49}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -979,11 +1022,42 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineFollow
   TrackerSettings:
     BindingMode: 4
-    PositionDamping: {x: 1, y: 1, z: 1}
+    PositionDamping: {x: 0.2, y: 0.2, z: 0.2}
     AngularDampingMode: 0
     RotationDamping: {x: 1, y: 1, z: 1}
     QuaternionDamping: 1
-  FollowOffset: {x: -10, y: 15, z: -10}
+  FollowOffset: {x: -15, y: 20, z: -15}
+--- !u!1 &1685133601
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1685133602}
+  m_Layer: 3
+  m_Name: AttackPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1685133602
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1685133601}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.01, y: 2.03, z: 1.92}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1290495648}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -992,6 +1066,6 @@ SceneRoots:
   - {fileID: 1611456813}
   - {fileID: 1660232239}
   - {fileID: 1184606468}
-  - {fileID: 1310740644}
   - {fileID: 1651208032}
   - {fileID: 824342347}
+  - {fileID: 1310740644}
