@@ -1,0 +1,90 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ad318ca74efbe4f4a9018df071a30061, type: 3}
+  m_Name: Cutscene_Bos_01
+  m_EditorClassIdentifier: Assembly-CSharp::CutsceneSequence
+  sequenceSteps:
+  - actionType: 0
+    waitForCompletion: 0
+    cameraID: Kamera_Bos
+    waitTime: 5
+    speakerName: ra
+    dialogueText: DADANG
+    actorCommands:
+    - actorName: denji
+      expression: {fileID: 0}
+      slot: 1
+      isTalking: 1
+    - actorName: asdad
+      expression: {fileID: 0}
+      slot: 5
+      isTalking: 0
+  - actionType: 1
+    waitForCompletion: 1
+    cameraID: Kamera_Bos
+    waitTime: 5
+    speakerName: ra
+    dialogueText: DADANG
+    actorCommands:
+    - actorName: denji
+      expression: {fileID: 0}
+      slot: 1
+      isTalking: 1
+    - actorName: 
+      expression: {fileID: 0}
+      slot: 5
+      isTalking: 0
+  - actionType: 1
+    waitForCompletion: 1
+    cameraID: Kamera_Bos
+    waitTime: 5
+    speakerName: ra
+    dialogueText: papang
+    actorCommands:
+    - actorName: denji
+      expression: {fileID: 0}
+      slot: 1
+      isTalking: 1
+    - actorName: 
+      expression: {fileID: 0}
+      slot: 5
+      isTalking: 0
+  - actionType: 1
+    waitForCompletion: 1
+    cameraID: Kamera_Bos
+    waitTime: 5
+    speakerName: sadsadasd
+    dialogueText: srhhdghkjfdtsrghdr
+    actorCommands:
+    - actorName: denji
+      expression: {fileID: 0}
+      slot: 1
+      isTalking: 0
+    - actorName: asdad
+      expression: {fileID: 0}
+      slot: 5
+      isTalking: 1
+  - actionType: 3
+    waitForCompletion: 0
+    cameraID: Player
+    waitTime: 5
+    speakerName: ra
+    dialogueText: DADANG
+    actorCommands:
+    - actorName: denji
+      expression: {fileID: 0}
+      slot: 1
+      isTalking: 1
+    - actorName: 
+      expression: {fileID: 0}
+      slot: 5
+      isTalking: 0

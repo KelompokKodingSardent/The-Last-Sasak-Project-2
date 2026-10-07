@@ -11,6 +11,10 @@ public class PlayerMovement : MonoBehaviour
     [Header("Gravity")]
     public float gravity = -9.81f;
 
+    // TAMBAHAN: State untuk mengunci pergerakan saat cutscene berjalan
+    [Header("State")]
+    public bool canMove = true;
+
     private float velocityY;
     private CharacterController controller;
     private Transform camTransform;
@@ -33,9 +37,22 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
+    // TAMBAHAN: Method ini akan dipanggil oleh SequenceManager nanti
+    public void SetMovementState(bool state)
+    {
+        canMove = state;
+    }
+
     private void Update()
     {
-        MovePlayer();
+        // TAMBAHAN: Cek canMove sebelum mengeksekusi pergerakan WASD
+        if (canMove)
+        {
+            MovePlayer();
+        }
+
+        // Gravitasi selalu dipanggil setiap frame, meskipun canMove = false
+        ApplyGravity();
     }
 
     private void MovePlayer()
@@ -105,7 +122,11 @@ public class PlayerMovement : MonoBehaviour
                 * Time.deltaTime
             );
         }
+    }
 
+    // TAMBAHAN: Pisahkan blok gravitasi ke method tersendiri agar lebih rapi
+    private void ApplyGravity()
+    {
         // =========================================
         // 6. GRAVITASI
         // =========================================
