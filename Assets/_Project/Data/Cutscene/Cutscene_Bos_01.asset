@@ -16,7 +16,7 @@ MonoBehaviour:
   - actionType: 0
     waitForCompletion: 1
     cameraID: Kamera_Bos
-    waitTime: 5
+    waitTime: 0
     speakerName: RAKA
     dialogueText: 
     actorCommands:
@@ -54,11 +54,11 @@ MonoBehaviour:
     actorCommands:
     - actorName: denji
       expression: {fileID: 21300000, guid: ba9f354034f876b4ab18a969cdabf86a, type: 3}
-      slot: 1
+      slot: 3
       isTalking: 0
     - actorName: RUCSONNU
       expression: {fileID: 21300000, guid: 59ed004f5943a184185e5467fcba0344, type: 3}
-      slot: 5
+      slot: 2
       isTalking: 1
   - actionType: 1
     waitForCompletion: 1
