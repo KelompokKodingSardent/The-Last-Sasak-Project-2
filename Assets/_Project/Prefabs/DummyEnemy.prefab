@@ -46,6 +46,7 @@ GameObject:
   - component: {fileID: 8817322293808569315}
   - component: {fileID: 4651545102431834437}
   - component: {fileID: 4520344519357997524}
+  - component: {fileID: -68908861271431001}
   m_Layer: 3
   m_Name: DummyEnemy
   m_TagString: Untagged
@@ -215,10 +216,7 @@ MonoBehaviour:
   player: {fileID: 0}
   maxHealth: 100
   currentHealth: 0
-  patrolRadius: 100
-  chaseRange: 6
   attackRange: 1.8
-  maxIdleTime: 2
   attackCooldown: 1.5
   attackHitDelay: 0.3
   attackDamage: 10
@@ -228,6 +226,22 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 0
   knockbackDuration: 0.3
+--- !u!114 &-68908861271431001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6047427404560953367}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1a8164f77f52724b8d3f03f69961f15, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyAI
+  currentState: 1
+  attackRange: 2.5
+  telegraphDuration: 0.8
+  comboChance: 0.5
 --- !u!1 &6254221948101112924
 GameObject:
   m_ObjectHideFlags: 0
@@ -329,10 +343,7 @@ MonoBehaviour:
   player: {fileID: 0}
   maxHealth: 100
   currentHealth: 0
-  patrolRadius: 8
-  chaseRange: 6
   attackRange: 1.8
-  maxIdleTime: 2
   attackCooldown: 1.5
   attackHitDelay: 0.3
   attackDamage: 10

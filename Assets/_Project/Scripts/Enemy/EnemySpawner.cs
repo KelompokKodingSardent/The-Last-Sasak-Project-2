@@ -1,44 +1,53 @@
 using UnityEngine;
+using System.Collections;
 
 public class EnemySpawner : MonoBehaviour
 {
-    [Header("Spawn Settings")]
-    public GameObject enemyPrefab;    // Prefab DummyEnemy
-    public int spawnCount = 2;        // Jumlah musuh untuk testing (1 atau 2)
-    public float spawnRadius = 10f;   // Jarak acak spawn dari lokasi spawner
+    [Header("Spawner Settings")]
+    public GameObject enemyPrefab;
+    public Transform playerTransform;
+    public int maxEnemies = 5;
+    public float spawnRadius = 8f; // Jarak radius spawn dari player
+    public float spawnInterval = 3f;
 
-    void Start()
+    private void Start()
     {
-        SpawnEnemies();
-    }
-
-    public void SpawnEnemies()
-    {
-        if (enemyPrefab == null)
+        if (playerTransform == null)
         {
-            Debug.LogError("Enemy Prefab belum dimasukkan ke EnemySpawner!");
-            return;
+            playerTransform = GameObject.FindGameObjectWithTag("Player").transform;
         }
 
-        for (int i = 0; i < spawnCount; i++)
+        StartCoroutine(SpawnRoutine());
+    }
+
+    IEnumerator SpawnRoutine()
+    {
+        while (true)
         {
-            Vector3 randomOffset = new Vector3(
-                Random.Range(-spawnRadius, spawnRadius),
-                0,
-                Random.Range(-spawnRadius, spawnRadius)
-            );
+            yield return new WaitForSeconds(spawnInterval);
 
-            Vector3 spawnPosition = transform.position + randomOffset;
-
-            // Spawn musuh baru
-            GameObject newEnemy = Instantiate(enemyPrefab, spawnPosition, Quaternion.identity);
-            Debug.Log($"[SPAWNER] Musuh #{i + 1} berhasil dispawn di posisi: {spawnPosition}");
+            // Cek jumlah musuh aktif (bisa disesuaikan dengan object pooling-mu)
+            if (GameObject.FindGameObjectsWithTag("Enemy").Length < maxEnemies)
+            {
+                SpawnEnemy();
+            }
         }
     }
 
-    void OnDrawGizmosSelected()
+    void SpawnEnemy()
     {
-        Gizmos.color = Color.green;
-        Gizmos.DrawWireSphere(transform.position, spawnRadius);
+        // Generate posisi random dalam bentuk lingkaran (bisa Kiri, Kanan, Belakang, Depan)
+        Vector2 randomDirection = Random.insideUnitCircle.normalized;
+        float randomDistance = Random.Range(4f, spawnRadius);
+        
+        Vector3 spawnPosition = new Vector3(
+            playerTransform.position.x + (randomDirection.x * randomDistance),
+            playerTransform.position.y,
+            playerTransform.position.z + (randomDirection.y * randomDistance)
+        );
+
+        // Spawn musuh di posisi random tersebut
+        Instantiate(enemyPrefab, spawnPosition, Quaternion.identity);
+        Debug.Log($"[SPAWNER] Musuh muncul di posisi: {spawnPosition}");
     }
 }
