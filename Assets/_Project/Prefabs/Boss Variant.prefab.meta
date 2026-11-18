@@ -1,6 +1,12 @@
 fileFormatVersion: 2
+<<<<<<<< HEAD:Assets/GabrielAguiarProductions.meta
+guid: 9ce2409d076e6694ea6db170f00bcb65
+folderAsset: yes
+DefaultImporter:
+========
 guid: d230bf83412b9c045963253164ccecf7
 PrefabImporter:
+>>>>>>>> Dev:Assets/_Project/Prefabs/Boss Variant.prefab.meta
   externalObjects: {}
   userData: 
   assetBundleName: 
