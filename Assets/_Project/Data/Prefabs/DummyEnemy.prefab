@@ -46,10 +46,9 @@ GameObject:
   - component: {fileID: 8817322293808569315}
   - component: {fileID: 4651545102431834437}
   - component: {fileID: 4520344519357997524}
-  - component: {fileID: -68908861271431001}
   m_Layer: 3
   m_Name: DummyEnemy
-  m_TagString: Untagged
+  m_TagString: Enemy
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -158,11 +157,11 @@ NavMeshAgent:
   m_GameObject: {fileID: 6047427404560953367}
   m_Enabled: 1
   m_AgentTypeID: 0
-  m_Radius: 0.5
-  m_Speed: 5
+  m_Radius: 0.35
+  m_Speed: 3.5
   m_Acceleration: 8
   avoidancePriority: 50
-  m_AngularSpeed: 360
+  m_AngularSpeed: 720
   m_StoppingDistance: 1.2
   m_AutoTraverseOffMeshLink: 1
   m_AutoBraking: 1
@@ -210,38 +209,35 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a454afc216b59e94bab75d2883e5be61, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyController
-  currentState: 0
-  agent: {fileID: 0}
-  rb: {fileID: 0}
   player: {fileID: 0}
-  maxHealth: 100
-  currentHealth: 0
-  attackRange: 1.8
-  attackCooldown: 1.5
-  attackHitDelay: 0.3
-  attackDamage: 10
-  attackPoint: {fileID: 0}
-  attackHitRadius: 1
-  playerLayer:
-    serializedVersion: 2
-    m_Bits: 0
-  knockbackDuration: 0.3
---- !u!114 &-68908861271431001
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6047427404560953367}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b1a8164f77f52724b8d3f03f69961f15, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EnemyAI
-  currentState: 1
-  attackRange: 2.5
-  telegraphDuration: 0.8
-  comboChance: 0.5
+  combatDirector: {fileID: 0}
+  detectionRange: 18
+  disengageRange: 26
+  predictionTime: 0.45
+  maxPredictionDistance: 2.5
+  velocitySmoothing: 8
+  maxTrackedPlayerSpeed: 12
+  attackRange: 2
+  approachRefreshInterval: 0.3
+  telegraphDuration: 0.7
+  telegraphCancelDistance: 0.8
+  recoveryDuration: 0.9
+  postAttackRest: 1.4
+  flankRadiusMin: 3.5
+  flankRadiusMax: 5
+  orbitDegreesPerSecond: 35
+  flankRefreshInterval: 0.5
+  flankStoppingDistance: 0.25
+  turnSpeed: 8
+  onTelegraphStarted:
+    m_PersistentCalls:
+      m_Calls: []
+  onAttack:
+    m_PersistentCalls:
+      m_Calls: []
+  onRecoveryFinished:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &6254221948101112924
 GameObject:
   m_ObjectHideFlags: 0
@@ -337,19 +333,32 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a454afc216b59e94bab75d2883e5be61, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyController
-  currentState: 0
-  agent: {fileID: 0}
-  rb: {fileID: 0}
   player: {fileID: 0}
-  maxHealth: 100
-  currentHealth: 0
+  combatDirector: {fileID: 0}
+  detectionRange: 18
+  disengageRange: 26
+  predictionTime: 0.45
+  maxPredictionDistance: 2.5
+  velocitySmoothing: 8
+  maxTrackedPlayerSpeed: 12
   attackRange: 1.8
-  attackCooldown: 1.5
-  attackHitDelay: 0.3
-  attackDamage: 10
-  attackPoint: {fileID: 43577988267983057}
-  attackHitRadius: 1
-  playerLayer:
-    serializedVersion: 2
-    m_Bits: 0
-  knockbackDuration: 0.3
+  approachRefreshInterval: 0.3
+  telegraphDuration: 0.8
+  telegraphCancelDistance: 0.8
+  recoveryDuration: 0.8
+  postAttackRest: 1.4
+  flankRadiusMin: 3.5
+  flankRadiusMax: 5
+  orbitDegreesPerSecond: 35
+  flankRefreshInterval: 0.5
+  flankStoppingDistance: 0.25
+  turnSpeed: 8
+  onTelegraphStarted:
+    m_PersistentCalls:
+      m_Calls: []
+  onAttack:
+    m_PersistentCalls:
+      m_Calls: []
+  onRecoveryFinished:
+    m_PersistentCalls:
+      m_Calls: []

@@ -1,235 +1,386 @@
-using System.Collections;
+
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.Events;
 
-[RequireComponent(typeof(NavMeshAgent))]
-[RequireComponent(typeof(Rigidbody))]
 public class EnemyController : MonoBehaviour
 {
-    public enum State
+    private enum BrainState
     {
-        Chase,
-        Attack,
-        Hurt
+        Idle,
+        Flanking,
+        Approaching,
+        Telegraphing,
+        Recovering,
+        Stunned
     }
 
-    [Header("State Status")]
-    public State currentState;
+    private NavMeshAgent agent;
+    private Transform player;
+    private CombatDirector director;
 
-    [Header("References")]
-    public NavMeshAgent agent;
-    public Rigidbody rb;
-    public Transform player;
+    private BrainState state = BrainState.Idle;
 
-    [Header("Stats")]
-    public int maxHealth = 100;
-    public int currentHealth;
+    [Header("Detection")]
+    public float chaseRange = 10f;
+    public float attackRange = 2f;
 
-    [Header("Combat & Movement Settings")]
-    public float attackRange = 1.5f;        // Jarak dekat untuk mulai memukul
-    public float attackCooldown = 1.2f;     // Jeda antar serangan
-    public float attackHitDelay = 0.2f;     // Delay waktu kena pukul
-    public float attackDamage = 10f;
-    
-    public Transform attackPoint;
-    public float attackHitRadius = 1f;
-    public LayerMask playerLayer;
+    [Header("Flanking Movement")]
+    public float flankRadiusMin = 3.5f;
+    public float flankRadiusMax = 5f;
+    public float orbitDegreesPerSecond = 35f;
+    public float destinationRefreshInterval = 0.5f;
 
-    [Header("Knockback Settings")]
-    public float knockbackDuration = 0.25f;
+    [Header("Combat Timing")]
+    public float telegraphDuration = 0.7f;
+    public float recoveryDuration = 0.8f;
+    public float restAfterAttack = 1.5f;
 
-    private float lastAttackTime;
-    private bool isAttacking;
+    [Header("Rotation")]
+    public float turnSpeed = 8f;
 
-    void Start()
+    [Header("Combat Events")]
+    public UnityEvent onTelegraphStarted;
+    public UnityEvent onAttack;
+
+    private float stateTimer;
+    private float restTimer;
+    private float nextDestinationTime;
+
+    private float orbitAngle;
+    private float orbitDirection;
+    private float flankRadius;
+
+    private void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
-        rb = GetComponent<Rigidbody>();
-        rb.isKinematic = true;
-
-        currentHealth = maxHealth;
-
-        // Cari Player secara otomatis jika belum di-drag di Inspector
-        FindPlayerTarget();
-
-        // Musuh style Hades / Minecraft Dungeons: Langsung CHASE saat spawn
-        ChangeState(State.Chase);
     }
 
-    void Update()
+    private void Start()
     {
-        // Jika player tidak ditemukan/hancur, cari ulang
-        if (player == null)
+        if (agent == null)
         {
-            FindPlayerTarget();
+            Debug.LogError("Enemy membutuhkan NavMeshAgent!", this);
+            enabled = false;
             return;
         }
 
-        switch (currentState)
+        if (player == null)
         {
-            case State.Chase:
-                UpdateChaseState();
-                break;
-            case State.Attack:
-                UpdateAttackState();
-                break;
-            case State.Hurt:
-                break;
+            GameObject playerObject =
+                GameObject.FindGameObjectWithTag("Player");
+
+            if (playerObject != null)
+                player = playerObject.transform;
         }
+
+        director = CombatDirector.Instance;
+
+        if (director == null)
+        {
+            Debug.LogError(
+                "CombatDirector belum tersedia di scene!"
+            );
+        }
+
+        orbitAngle = Random.Range(0f, 360f);
+        orbitDirection = Random.value > 0.5f ? 1f : -1f;
+
+        flankRadius = Random.Range(
+            flankRadiusMin,
+            flankRadiusMax
+        );
+
+        // Variasi prioritas local avoidance.
+        agent.avoidancePriority = Random.Range(20, 80);
     }
 
-    void FindPlayerTarget()
+    private void Update()
     {
         if (player == null)
         {
-            GameObject p = GameObject.FindWithTag("Player");
-            if (p != null) player = p.transform;
+            EnterIdle();
+            return;
         }
-    }
 
-    public void ChangeState(State newState)
-    {
-        if (currentState == State.Hurt && newState != State.Chase) return;
+        if (agent == null || !agent.enabled || !agent.isOnNavMesh)
+            return;
 
-        currentState = newState;
-
-        switch (currentState)
+        if (state == BrainState.Stunned)
         {
-            case State.Chase:
-                if (agent.enabled && agent.isOnNavMesh)
-                {
-                    agent.isStopped = false;
-                }
-                break;
-            case State.Attack:
-                if (agent.enabled && agent.isOnNavMesh)
-                {
-                    agent.ResetPath();
-                    agent.isStopped = true;
-                }
-                break;
-            case State.Hurt:
-                if (agent.enabled && agent.isOnNavMesh)
-                {
-                    agent.isStopped = true;
-                }
-                break;
+            HandleStunned();
+            return;
         }
-    }
 
-    void UpdateChaseState()
-    {
-        if (!agent.enabled || !agent.isOnNavMesh) return;
+        float distance = GetDistanceToPlayer();
 
-        float distance = Vector3.Distance(transform.position, player.position);
-
-        // Jika sudah dekat, masuk ke mode Attack
-        if (distance <= attackRange)
+        // Player berada di luar jangkauan deteksi.
+        if (distance > chaseRange)
         {
-            ChangeState(State.Attack);
+            EnterIdle();
+            return;
+        }
+
+        // Waktu istirahat setelah menyerang.
+        if (restTimer > 0f)
+        {
+            restTimer -= Time.deltaTime;
+            HandleFlanking();
+            return;
+        }
+
+        // Mencoba mendapatkan slot agresor.
+        bool hasSlot =
+            director == null || director.RequestAggro(this);
+
+        if (hasSlot)
+        {
+            HandleAggressor(distance);
         }
         else
         {
-            // Terus kejar posisi player
-            agent.SetDestination(player.position);
+            HandleFlanking();
         }
     }
 
-    void UpdateAttackState()
-    {
-        float distance = Vector3.Distance(transform.position, player.position);
+    // =========================================
+    // AGGRESSOR BEHAVIOR
+    // =========================================
 
-        // Jika player kabur keluar dari jarak serang, kembali mengejar
-        if (distance > attackRange + 0.5f && !isAttacking)
+    private void HandleAggressor(float distance)
+    {
+        // Sedang memberikan telegraph.
+        if (state == BrainState.Telegraphing)
         {
-            ChangeState(State.Chase);
+            agent.isStopped = true;
+            FacePlayer();
+
+            if (distance > attackRange + 0.8f)
+            {
+                state = BrainState.Approaching;
+                return;
+            }
+
+            stateTimer -= Time.deltaTime;
+
+            if (stateTimer <= 0f)
+            {
+                onAttack?.Invoke();
+
+                state = BrainState.Recovering;
+                stateTimer = recoveryDuration;
+            }
+
             return;
         }
 
-        // Musuh selalu berputar menghadap Player saat bersiap menyerang
-        Vector3 lookDir = new Vector3(player.position.x - transform.position.x, 0, player.position.z - transform.position.z);
-        if (lookDir != Vector3.zero)
+        // Sedang melakukan recovery.
+        if (state == BrainState.Recovering)
         {
-            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * 10f);
-        }
+            agent.isStopped = true;
+            FacePlayer();
 
-        if (Time.time >= lastAttackTime + attackCooldown && !isAttacking)
-        {
-            StartCoroutine(ExecuteAttack());
-        }
-    }
+            stateTimer -= Time.deltaTime;
 
-    IEnumerator ExecuteAttack()
-    {
-        isAttacking = true;
-        lastAttackTime = Time.time;
+            if (stateTimer <= 0f)
+            {
+                // Selesaikan giliran menyerang.
+                if (director != null)
+                    director.ReleaseAggro(this);
 
-        Debug.Log("[DEBUG AI] Musuh mulai mengayunkan serangan!");
+                state = BrainState.Flanking;
+                restTimer = restAfterAttack;
+            }
 
-        yield return new WaitForSeconds(attackHitDelay);
-
-        Vector3 hitPoint = attackPoint != null ? attackPoint.position : transform.position + transform.forward;
-        Collider[] hitPlayers = Physics.OverlapSphere(hitPoint, attackHitRadius, playerLayer);
-
-        foreach (Collider p in hitPlayers)
-        {
-            Debug.Log("[DEBUG AI] HIT! Serangan musuh MENGENAI Player!");
-        }
-
-        yield return new WaitForSeconds(0.3f);
-        isAttacking = false;
-    }
-
-    public void TakeDamage(int damageAmount, Vector3 attackerPosition, float knockbackForce)
-    {
-        currentHealth -= damageAmount;
-        Debug.Log($"[DEBUG AI] Musuh TERKENA HIT! Sisa HP: {currentHealth}");
-
-        if (currentHealth <= 0)
-        {
-            Die();
             return;
         }
 
-        StopAllCoroutines();
-        isAttacking = false;
-        StartCoroutine(ApplyKnockback(attackerPosition, knockbackForce));
+        // Mendekati player.
+        state = BrainState.Approaching;
+
+        agent.isStopped = false;
+        agent.stoppingDistance = Mathf.Max(
+            0.1f,
+            attackRange * 0.75f
+        );
+
+        if (distance > attackRange)
+        {
+            Vector3 target = player.position;
+
+            // Cari titik tujuan yang berada pada NavMesh.
+            if (NavMesh.SamplePosition(
+                player.position,
+                out NavMeshHit hit,
+                1.5f,
+                agent.areaMask))
+            {
+                target = hit.position;
+            }
+
+            RefreshDestination(target);
+            return;
+        }
+
+        // Player sudah berada dalam jangkauan.
+        agent.isStopped = true;
+
+        FacePlayer();
+
+        state = BrainState.Telegraphing;
+        stateTimer = telegraphDuration;
+
+        onTelegraphStarted?.Invoke();
     }
 
-    IEnumerator ApplyKnockback(Vector3 attackerPosition, float force)
+    // =========================================
+    // FLANKER / ORBIT BEHAVIOR
+    // =========================================
+
+    private void HandleFlanking()
     {
-        ChangeState(State.Hurt);
+        state = BrainState.Flanking;
 
-        agent.enabled = false;
-        rb.isKinematic = false;
+        agent.isStopped = false;
+        agent.stoppingDistance = 0.25f;
 
-        Vector3 pushDirection = (transform.position - attackerPosition).normalized;
-        pushDirection.y = 0.1f;
+        // Putar sudut orbit.
+        orbitAngle +=
+            orbitDirection *
+            orbitDegreesPerSecond *
+            Time.deltaTime;
 
-        rb.AddForce(pushDirection * force, ForceMode.Impulse);
+        float radians = orbitAngle * Mathf.Deg2Rad;
 
-        yield return new WaitForSeconds(knockbackDuration);
+        // Tentukan posisi mengitari player.
+        Vector3 offset = new Vector3(
+            Mathf.Cos(radians),
+            0f,
+            Mathf.Sin(radians)
+        ) * flankRadius;
 
-        rb.linearVelocity = Vector3.zero;
-        rb.isKinematic = true;
-        agent.enabled = true;
+        Vector3 desiredPosition = player.position + offset;
 
-        ChangeState(State.Chase);
+        // Perbarui tujuan secara berkala.
+        if (Time.time < nextDestinationTime)
+            return;
+
+        nextDestinationTime =
+            Time.time + Mathf.Max(0.1f, destinationRefreshInterval);
+
+        // Pastikan tujuan berada pada NavMesh.
+        if (NavMesh.SamplePosition(
+            desiredPosition,
+            out NavMeshHit hit,
+            2f,
+            agent.areaMask))
+        {
+            agent.SetDestination(hit.position);
+        }
     }
 
-    void Die()
+    // =========================================
+    // STUN BEHAVIOR
+    // =========================================
+
+    public void ApplyStun(float duration)
     {
-        Debug.Log("[DEBUG AI] Musuh Mati!");
-        Destroy(gameObject);
+        if (agent == null)
+            return;
+
+        if (director != null)
+            director.ReleaseAggro(this);
+
+        state = BrainState.Stunned;
+        stateTimer = Mathf.Max(0.1f, duration);
+
+        agent.isStopped = true;
+
+        if (agent.isOnNavMesh)
+            agent.ResetPath();
     }
 
-    void OnDrawGizmosSelected()
+    private void HandleStunned()
     {
-        Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(transform.position, attackRange);
+        agent.isStopped = true;
 
-        Vector3 hitPoint = attackPoint != null ? attackPoint.position : transform.position + transform.forward;
-        Gizmos.color = Color.magenta;
-        Gizmos.DrawWireSphere(hitPoint, attackHitRadius);
+        FacePlayer();
+
+        stateTimer -= Time.deltaTime;
+
+        if (stateTimer <= 0f)
+        {
+            state = BrainState.Flanking;
+            restTimer = 0.8f;
+        }
+    }
+
+    // =========================================
+    // GENERAL FUNCTIONS
+    // =========================================
+
+    private float GetDistanceToPlayer()
+    {
+        Vector3 difference = player.position - transform.position;
+
+        difference.y = 0f;
+
+        return difference.magnitude;
+    }
+
+    private void RefreshDestination(Vector3 destination)
+    {
+        if (Time.time < nextDestinationTime)
+            return;
+
+        nextDestinationTime =
+            Time.time + Mathf.Max(0.1f, destinationRefreshInterval);
+
+        agent.SetDestination(destination);
+    }
+
+    private void FacePlayer()
+    {
+        if (player == null)
+            return;
+
+        Vector3 direction = player.position - transform.position;
+
+        direction.y = 0f;
+
+        if (direction.sqrMagnitude > 0.001f)
+        {
+            Quaternion targetRotation =
+                Quaternion.LookRotation(direction);
+
+            transform.rotation = Quaternion.Slerp(
+                transform.rotation,
+                targetRotation,
+                turnSpeed * Time.deltaTime
+            );
+        }
+    }
+
+    private void EnterIdle()
+    {
+        if (state == BrainState.Idle)
+            return;
+
+        state = BrainState.Idle;
+
+        if (agent != null && agent.enabled && agent.isOnNavMesh)
+        {
+            agent.isStopped = true;
+            agent.ResetPath();
+        }
+
+        if (director != null)
+            director.ReleaseAggro(this);
+    }
+
+    private void OnDisable()
+    {
+        if (director != null)
+            director.Unregister(this);
     }
 }

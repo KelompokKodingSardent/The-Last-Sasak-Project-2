@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.AI;
 using System.Collections;
 
 public class EnemySpawner : MonoBehaviour
@@ -34,20 +35,45 @@ public class EnemySpawner : MonoBehaviour
         }
     }
 
-    void SpawnEnemy()
+    
+void SpawnEnemy()
+{
+    Vector2 randomDirection = Random.insideUnitCircle;
+
+    if (randomDirection.sqrMagnitude < 0.001f)
+        randomDirection = Vector2.right;
+
+    randomDirection.Normalize();
+
+    float randomDistance = Random.Range(4f, spawnRadius);
+
+    Vector3 desiredPosition = playerTransform.position +
+        new Vector3(
+            randomDirection.x,
+            0f,
+            randomDirection.y
+        ) * randomDistance;
+
+    // Cari posisi terdekat yang bisa dilalui.
+    if (NavMesh.SamplePosition(
+        desiredPosition,
+        out NavMeshHit hit,
+        2f,
+        NavMesh.AllAreas))
     {
-        // Generate posisi random dalam bentuk lingkaran (bisa Kiri, Kanan, Belakang, Depan)
-        Vector2 randomDirection = Random.insideUnitCircle.normalized;
-        float randomDistance = Random.Range(4f, spawnRadius);
-        
-        Vector3 spawnPosition = new Vector3(
-            playerTransform.position.x + (randomDirection.x * randomDistance),
-            playerTransform.position.y,
-            playerTransform.position.z + (randomDirection.y * randomDistance)
+        Instantiate(
+            enemyPrefab,
+            hit.position,
+            Quaternion.identity
         );
 
-        // Spawn musuh di posisi random tersebut
-        Instantiate(enemyPrefab, spawnPosition, Quaternion.identity);
-        Debug.Log($"[SPAWNER] Musuh muncul di posisi: {spawnPosition}");
+        Debug.Log($"[SPAWNER] Musuh muncul: {hit.position}");
     }
+    else
+    {
+        Debug.LogWarning(
+            "[SPAWNER] Tidak menemukan posisi spawn di NavMesh!"
+        );
+    }
+}
 }
