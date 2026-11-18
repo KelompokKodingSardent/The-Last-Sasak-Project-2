@@ -1890,7 +1890,7 @@ GameObject:
   - component: {fileID: 2126225074}
   - component: {fileID: 2126225073}
   m_Layer: 0
-  m_Name: Cube
+  m_Name: TriggerSceneBox
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
