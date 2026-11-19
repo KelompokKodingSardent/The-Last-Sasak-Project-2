@@ -10,13 +10,13 @@ EditorBuildSettings:
     guid: ab566dabf6881634ea7a9541e953cf56
   - enabled: 1
     path: Assets/_Project/Scenes/CombatTest.unity
-    guid: 00000000000000000000000000000000
+    guid: 1f314afd13814634290607c72b8a06b0
   - enabled: 1
     path: Assets/_Project/Scenes/ForestRun.unity
-    guid: 00000000000000000000000000000000
+    guid: 16da200faf7360940851e9d31712ebb9
   - enabled: 1
     path: Assets/_Project/Scenes/Hub.unity
-    guid: 00000000000000000000000000000000
+    guid: 8d3a6dc134e0aa749833c7e7900e17a3
   - enabled: 1
     path: Assets/_Project/Scenes/Level_01.unity
     guid: 99d747e9059b8ff4988a7fb0b1a5c32a

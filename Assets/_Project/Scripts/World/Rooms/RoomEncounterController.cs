@@ -33,8 +33,7 @@ public class RoomEncounterController : MonoBehaviour
         EnemySpawnPoint[] points = room != null ? room.SpawnPoints : null;
         if (points == null || points.Length == 0)
         {
-            Spawn(MeleePrefab, transform.position + Vector3.forward * 4f);
-            Spawn(RangedPrefab, transform.position + Vector3.right * 4f + Vector3.forward * 2f);
+            TrackExisting(room);
             return;
         }
 

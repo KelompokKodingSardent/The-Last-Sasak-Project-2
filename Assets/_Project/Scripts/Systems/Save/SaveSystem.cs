@@ -29,9 +29,7 @@ public class SaveSystem : MonoBehaviour
 
     public static void SaveNow()
     {
-        if (Instance == null)
-            new GameObject("SaveSystem").AddComponent<SaveSystem>();
-        Instance.Save();
+        Instance?.Save();
     }
 
     public void Save()

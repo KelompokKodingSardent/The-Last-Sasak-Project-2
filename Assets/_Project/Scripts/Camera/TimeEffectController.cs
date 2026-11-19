@@ -21,13 +21,7 @@ public class TimeEffectController : MonoBehaviour
 
     public static void Play(float duration)
     {
-        if (Instance == null)
-        {
-            GameObject go = new GameObject("TimeEffectController");
-            Instance = go.AddComponent<TimeEffectController>();
-        }
-
-        Instance.Run(duration);
+        Instance?.Run(duration);
     }
 
     public void Run(float duration)

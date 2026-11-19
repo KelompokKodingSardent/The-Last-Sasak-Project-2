@@ -7,8 +7,6 @@ public class CombatResolver : MonoBehaviour
     void Awake()
     {
         parryResolver = GetComponent<ParryResolver>();
-        if (parryResolver == null)
-            parryResolver = gameObject.AddComponent<ParryResolver>();
     }
 
     public DamageResult Resolve(IDamageable target, DamageInfo info)

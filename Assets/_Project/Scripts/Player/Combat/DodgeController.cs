@@ -23,6 +23,12 @@ public class DodgeController : MonoBehaviour
             config = motor.Config;
     }
 
+    void Start()
+    {
+        if (config == null && motor != null)
+            config = motor.Config;
+    }
+
     public void BindConfig(PlayerMovementConfig movementConfig)
     {
         config = movementConfig;

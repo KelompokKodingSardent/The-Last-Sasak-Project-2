@@ -21,6 +21,8 @@ public class PlayerMotor : MonoBehaviour
         controller = GetComponent<CharacterController>();
         input = GetComponent<PlayerInputReader>();
         facing = GetComponent<PlayerFacingController>();
+        if (Config == null)
+            Config = PlayerMovementConfig.CreateRuntime();
         ApplyControllerSettings();
     }
 

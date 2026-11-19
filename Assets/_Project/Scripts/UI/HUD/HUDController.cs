@@ -21,6 +21,13 @@ public class HUDController : MonoBehaviour
 
         HealthBar?.Bind(PlayerHealth);
         InventoryView?.Bind(PlayerHealth != null ? PlayerHealth.GetComponent<Inventory>() : null);
+        HandleSouls(CurrencyWallet.Instance != null ? CurrencyWallet.Instance.SoulsCoin : 0);
+        if (ExperienceSystem.Instance != null)
+            HandleExp(ExperienceSystem.Instance.CurrentExp, ExperienceSystem.Instance.Level);
+        else
+            HandleExp(0, 1);
+        if (RoomLabel != null && string.IsNullOrEmpty(RoomLabel.text))
+            RoomLabel.text = "Encounter";
     }
 
     void OnEnable()

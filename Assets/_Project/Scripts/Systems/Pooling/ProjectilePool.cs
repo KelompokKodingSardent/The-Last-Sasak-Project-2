@@ -15,7 +15,7 @@ public class ProjectilePool : MonoBehaviour
 
         Projectile projectile = go.GetComponent<Projectile>();
         if (projectile == null)
-            projectile = go.AddComponent<Projectile>();
+            return null;
         projectile.Launch(direction, owner, fromPlayer, damage);
         return projectile;
     }

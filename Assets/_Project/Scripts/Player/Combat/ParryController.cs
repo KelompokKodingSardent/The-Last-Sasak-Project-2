@@ -14,9 +14,8 @@ public class ParryController : MonoBehaviour
         actions = GetComponent<PlayerActionController>();
         window = GetComponent<ParryWindow>();
         anim = GetComponent<PlayerAnimationController>();
-        if (window == null)
-            window = gameObject.AddComponent<ParryWindow>();
-        window.Duration = ActiveDuration;
+        if (window != null)
+            window.Duration = ActiveDuration;
     }
 
     public bool TryParry()

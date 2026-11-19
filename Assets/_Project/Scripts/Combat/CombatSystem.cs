@@ -17,8 +17,6 @@ public class CombatSystem : MonoBehaviour
 
         Instance = this;
         resolver = GetComponent<CombatResolver>();
-        if (resolver == null)
-            resolver = gameObject.AddComponent<CombatResolver>();
     }
 
     public int NextAttackId()
@@ -28,6 +26,8 @@ public class CombatSystem : MonoBehaviour
 
     public DamageResult ApplyDamage(IDamageable target, DamageInfo info)
     {
+        if (resolver == null)
+            return target != null ? target.TakeDamage(info) : DamageResult.Ignored;
         return resolver.Resolve(target, info);
     }
 

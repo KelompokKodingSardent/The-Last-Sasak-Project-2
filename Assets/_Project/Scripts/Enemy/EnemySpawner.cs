@@ -10,6 +10,7 @@ public class EnemySpawner : MonoBehaviour
     public int maxEnemies = 5;
     public float spawnRadius = 8f;
     public float spawnInterval = 3f;
+    public bool AutoSpawn;
 
     int alive;
 
@@ -22,7 +23,8 @@ public class EnemySpawner : MonoBehaviour
                 playerTransform = player.transform;
         }
 
-        StartCoroutine(SpawnRoutine());
+        if (AutoSpawn)
+            StartCoroutine(SpawnRoutine());
     }
 
     IEnumerator SpawnRoutine()
