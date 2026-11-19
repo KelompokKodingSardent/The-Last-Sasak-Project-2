@@ -19,9 +19,11 @@ public class PlayerMovement : MonoBehaviour
     private CharacterController controller;
     private Transform camTransform;
     private float turnSmoothVelocity;
+    private PlayerMotor motor;
 
     private void Start()
     {
+        motor = GetComponent<PlayerMotor>();
         controller = GetComponent<CharacterController>();
 
         // Ambil referensi kamera utama
@@ -45,6 +47,9 @@ public class PlayerMovement : MonoBehaviour
 
     private void Update()
     {
+        if (motor != null)
+            return;
+
         // TAMBAHAN: Cek canMove sebelum mengeksekusi pergerakan WASD
         if (canMove)
         {

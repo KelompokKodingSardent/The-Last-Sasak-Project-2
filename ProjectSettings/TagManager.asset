@@ -5,6 +5,9 @@ TagManager:
   serializedVersion: 3
   tags:
   - Enemy
+  - Player
+  - Projectile
+  - Collectible
   layers:
   - Default
   - TransparentFX
@@ -14,13 +17,13 @@ TagManager:
   - UI
   - 
   - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
+  - Player
+  - Environment
+  - PlayerHitbox
+  - EnemyHitbox
+  - Projectile
+  - Collectible
+  - Interactable
   - 
   - 
   - 

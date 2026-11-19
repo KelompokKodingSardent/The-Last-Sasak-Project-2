@@ -6,10 +6,17 @@ public class RuntimeNavMeshBuilder : MonoBehaviour
 {
     private NavMeshSurface navMeshSurface;
 
+    public bool BakeOnStart = true;
+
     private void Awake()
     {
-        // Mengambil komponen NavMeshSurface yang menempel pada GameObject ini
         navMeshSurface = GetComponent<NavMeshSurface>();
+    }
+
+    void Start()
+    {
+        if (BakeOnStart)
+            BakeNavMeshRuntime();
     }
 
     // Dipanggil oleh MapGenerator setelah semua aset 3D terpasang di posisi akhirnya

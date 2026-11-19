@@ -27,6 +27,9 @@ public int MaxBranchLength = 2; // Maksimal panjang jalan buntu (1-2 room)
 
     void Start()
     {
+        if ((ForestRooms == null || ForestRooms.Length == 0) &&
+            (BeachRooms == null || BeachRooms.Length == 0))
+            return;
         GenerateMap();
     }
 

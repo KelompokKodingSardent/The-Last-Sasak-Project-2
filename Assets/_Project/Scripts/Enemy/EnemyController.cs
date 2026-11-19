@@ -54,6 +54,8 @@ public class EnemyController : MonoBehaviour
     private void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
+        if (GetComponent<EnemyBrain>() != null)
+            enabled = false;
     }
 
     private void Start()

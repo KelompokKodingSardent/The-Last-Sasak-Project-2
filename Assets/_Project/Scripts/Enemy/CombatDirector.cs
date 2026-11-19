@@ -19,6 +19,8 @@ public class CombatDirector : MonoBehaviour
     private readonly HashSet<EnemyController> waitingSet =
         new HashSet<EnemyController>();
 
+    private readonly HashSet<EnemyBrain> activeBrains = new HashSet<EnemyBrain>();
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -28,6 +30,24 @@ public class CombatDirector : MonoBehaviour
         }
 
         Instance = this;
+    }
+
+    public bool RequestBrainAggro(EnemyBrain brain)
+    {
+        if (brain == null)
+            return false;
+        if (activeBrains.Contains(brain))
+            return true;
+        if (activeBrains.Count >= Mathf.Max(1, maxAggressors))
+            return false;
+        activeBrains.Add(brain);
+        return true;
+    }
+
+    public void ReleaseBrain(EnemyBrain brain)
+    {
+        if (brain != null)
+            activeBrains.Remove(brain);
     }
 
     public bool RequestAggro(EnemyController enemy)
