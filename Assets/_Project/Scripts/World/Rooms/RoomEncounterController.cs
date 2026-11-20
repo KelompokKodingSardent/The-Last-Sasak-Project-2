@@ -4,6 +4,7 @@ using UnityEngine;
 public class RoomEncounterController : MonoBehaviour
 {
     public GameObject MeleePrefab;
+    public GameObject SkirmisherPrefab;
     public GameObject RangedPrefab;
     public GameObject ElitePrefab;
     public Transform Player;
@@ -71,9 +72,11 @@ public class RoomEncounterController : MonoBehaviour
 
     GameObject PrefabFor(EnemyArchetype archetype)
     {
-        if (archetype == EnemyArchetype.Ranged)
+        if (archetype == EnemyArchetype.Skirmisher)
+            return SkirmisherPrefab != null ? SkirmisherPrefab : MeleePrefab;
+        if (archetype == EnemyArchetype.Ranged || archetype == EnemyArchetype.Ranger)
             return RangedPrefab;
-        if (archetype == EnemyArchetype.Elite)
+        if (archetype == EnemyArchetype.Elite || archetype == EnemyArchetype.Bulwark)
             return ElitePrefab != null ? ElitePrefab : MeleePrefab;
         return MeleePrefab;
     }
