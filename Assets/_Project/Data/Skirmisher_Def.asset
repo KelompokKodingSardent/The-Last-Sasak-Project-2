@@ -41,6 +41,14 @@ MonoBehaviour:
   SideDashCooldown: 2.6
   SeparationRadius: 1.35
   SeparationStrength: 2.4
+  MinSafeDistance: 0
+  RequireLineOfSight: 0
+  ObstacleLayerMask:
+    serializedVersion: 2
+    m_Bits: 0
+  BaseStaggerResistance: 0
+  HasFrontalGuard: 0
+  FrontalGuardAngle: 110
   AttackPatterns:
   - {fileID: 11400000, guid: 04371f99473dbb34d96e4505630fcef7, type: 2}
   - {fileID: 11400000, guid: fde292ce6a5bb974084f9fba6e930a0e, type: 2}
