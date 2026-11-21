@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -8,12 +9,13 @@ public enum EnemyArchetype
     Ranged,
     Elite,
 
-    // Phase 1+ archetypes
+    // Phase 1-4 archetypes
     Vanguard,
     Skirmisher,
     Ranger,
     Bulwark,
-    Controller
+    Controller,
+    Boss
 }
 
 public enum PreferredCombatZone
@@ -22,6 +24,26 @@ public enum PreferredCombatZone
     Flank,
     Rear,
     Ranged
+}
+
+[Serializable]
+public class BossStageConfig
+{
+    public string stageName = "Stage 2 — Enraged";
+    [Tooltip("Masuk ke stage ini jika rasio HP <= nilai ini (0.6 = 60% HP)")]
+    [Range(0.05f, 0.95f)] public float hpThresholdNormalized = 0.6f;
+    [Tooltip("Atau masuk ke stage ini setelah terkena Stagger Break sebanyak N kali (0 = abaikan)")]
+    public int staggerBreaksRequired = 0;
+
+    [Header("Perubahan Tempo Stage")]
+    [Min(0.6f)] public float moveSpeedMultiplier = 1.2f;
+    [Min(0.4f)] public float cooldownMultiplier = 0.75f;
+    [Min(0.4f)] public float decisionDelayMultiplier = 0.7f;
+    [Min(0.8f)] public float damageMultiplier = 1.15f;
+
+    [Header("Pola Serangan Baru di Stage Ini")]
+    public EnemyAttackPatternSO stageTransitionPattern;
+    public List<EnemyAttackPatternSO> unlockedPatterns = new List<EnemyAttackPatternSO>();
 }
 
 [CreateAssetMenu(fileName = "NewEnemyDefinition", menuName = "TLS/Enemy/Enemy Definition")]
@@ -77,7 +99,13 @@ public class EnemyDefinitionSO : ScriptableObject
     public bool HasFrontalGuard = false;
     [Range(45f, 160f)] public float FrontalGuardAngle = 110f;
 
-    [Header("Phase 1-3 — Attack Patterns")]
+    [Header("Phase 4 — Elite & Boss Multi-Stage")]
+    public bool IsEliteOrBoss = false;
+    [Tooltip("Setiap kali pulih dari Staggered, MaxStagger bertambah sebesar persentase ini agar boss tidak mudah di-stunlock terus-menerus")]
+    [Range(0f, 0.5f)] public float StaggerGrowthPerBreak = 0.20f;
+    public List<BossStageConfig> BossStages = new List<BossStageConfig>();
+
+    [Header("Phase 1-4 — Attack Patterns")]
     public List<EnemyAttackPatternSO> AttackPatterns = new List<EnemyAttackPatternSO>();
 
     public static EnemyDefinitionSO CreateRuntime(string name, EnemyArchetype type)
@@ -116,7 +144,7 @@ public class EnemyDefinitionSO : ScriptableObject
             so.RepositionSpeed = 4.0f;
             so.PreferredZone = PreferredCombatZone.Ranged;
         }
-        else if (type == EnemyArchetype.Elite || type == EnemyArchetype.Bulwark)
+        else if (type == EnemyArchetype.Bulwark)
         {
             so.MaxHealth = 140f;
             so.AttackDamage = 20f;
@@ -128,6 +156,22 @@ public class EnemyDefinitionSO : ScriptableObject
             so.IdealCombatDistance = 2.2f;
             so.BaseStaggerResistance = 0.35f;
             so.HasFrontalGuard = true;
+            so.PreferredZone = PreferredCombatZone.Front;
+        }
+        else if (type == EnemyArchetype.Elite || type == EnemyArchetype.Boss)
+        {
+            bool isBoss = type == EnemyArchetype.Boss;
+            so.IsEliteOrBoss = true;
+            so.MaxHealth = isBoss ? 320f : 180f;
+            so.AttackDamage = isBoss ? 22f : 18f;
+            so.MoveSpeed = 3.4f;
+            so.StrafeSpeed = 2.4f;
+            so.RepositionSpeed = 3.8f;
+            so.AttackRange = 2.5f;
+            so.IdealCombatDistance = 2.3f;
+            so.BaseStaggerResistance = 0.25f;
+            so.StaggerPunishDuration = isBoss ? 2.4f : 2.1f;
+            so.StaggerGrowthPerBreak = 0.20f;
             so.PreferredZone = PreferredCombatZone.Front;
         }
         else if (type == EnemyArchetype.Controller)

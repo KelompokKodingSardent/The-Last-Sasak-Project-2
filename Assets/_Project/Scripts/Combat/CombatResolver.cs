@@ -18,12 +18,14 @@ public class CombatResolver : MonoBehaviour
         GameObject targetObject = targetBehaviour != null ? targetBehaviour.gameObject : null;
 
         if (parryResolver != null && targetObject != null &&
-            parryResolver.TryResolve(targetObject, info, out IParryable parryable))
+            parryResolver.TryResolve(targetObject, info, out IParryable parryable) )
         {
+            targetObject.GetComponent<ArtifactController>()?.NotifyParrySuccess(info.Instigator);
             parryable?.OnParried(targetObject.transform);
             CameraEventManager.TriggerCameraShake(1.2f);
             TimeEffectController.Play(0.04f);
             return DamageResult.Parried();
+            
         }
 
         DamageResult result = target.TakeDamage(info);

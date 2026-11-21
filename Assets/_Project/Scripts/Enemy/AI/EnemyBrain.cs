@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 
 public enum EnemyBrainState
@@ -23,8 +24,13 @@ public class EnemyBrain : MonoBehaviour
     [Header("Definisi Archetype (Wajib Di-assign)")]
     [SerializeField] private EnemyDefinitionSO definition;
 
+    [Header("Phase 4 — Enemy Modifiers (Opsional)")]
+    [SerializeField] private List<EnemyModifierSO> initialModifiers = new List<EnemyModifierSO>();
+
     [Header("Debug State (Read-Only)")]
     [SerializeField] private EnemyBrainState currentState = EnemyBrainState.Idle;
+    [SerializeField] private int currentStage = 1;
+    [SerializeField] private int staggerBreakCount = 0;
     [SerializeField] private EnemyTacticalRole currentRoleDebug = EnemyTacticalRole.Hold;
     [SerializeField] private CombatSector currentSectorDebug = CombatSector.Front;
     [SerializeField] private string currentPatternDebug;
@@ -40,6 +46,7 @@ public class EnemyBrain : MonoBehaviour
     private readonly Dictionary<EnemyAttackPatternSO, float> _patternCooldowns = new Dictionary<EnemyAttackPatternSO, float>();
     private readonly List<EnemyAttackPatternSO> _activePatterns = new List<EnemyAttackPatternSO>();
     private readonly List<EnemyAttackPatternSO> _runtimeFallbackPatterns = new List<EnemyAttackPatternSO>();
+    private readonly List<EnemyModifierSO> _activeModifiers = new List<EnemyModifierSO>();
 
     private EnemyAttackPatternSO _selectedPattern;
     private int _currentSwingIndex;
@@ -57,9 +64,40 @@ public class EnemyBrain : MonoBehaviour
     private float _empowerSpeedMultiplier = 1f;
     private float _empowerDamageMultiplier = 1f;
 
+    // Phase 4: Boss Stage & Modifier Multipliers
+    private float _stageMoveSpeedMult = 1f;
+    private float _stageCooldownMult = 1f;
+    private float _stageDecisionMult = 1f;
+    private float _stageDamageMult = 1f;
+
+    private float _modMoveSpeedMult = 1f;
+    private float _modRepositionSpeedMult = 1f;
+    private float _modCooldownMult = 1f;
+    private float _modDecisionMult = 1f;
+    private float _modDamageMult = 1f;
+    private float _modBonusStaggerRes = 0f;
+    private float _modBonusFlankChance = 0f;
+    private float _modBonusChainChance = 0f;
+    private bool _modGrantGuard;
+    private bool _modGrantSideDash;
+    private bool _modForceReposition;
+
+    private float _initialMaxStagger = 100f;
+
+    // Cached reflection untuk membaca rasio HP dari Health.cs tanpa ketergantungan nama field
+    private FieldInfo _healthCurField;
+    private FieldInfo _healthMaxField;
+    private PropertyInfo _healthCurProp;
+    private PropertyInfo _healthMaxProp;
+
     public EnemyBrainState CurrentState => currentState;
-    public float SpeedMultiplier => _empowerTimer > 0f ? _empowerSpeedMultiplier : 1f;
-    public float DamageMultiplier => _empowerTimer > 0f ? _empowerDamageMultiplier : 1f;
+    public int CurrentStage => currentStage;
+    public bool IsEliteOrBoss => definition != null &&
+        (definition.IsEliteOrBoss || definition.Archetype == EnemyArchetype.Elite || definition.Archetype == EnemyArchetype.Boss);
+
+    public float SpeedMultiplier => (_empowerTimer > 0f ? _empowerSpeedMultiplier : 1f) * _stageMoveSpeedMult * _modMoveSpeedMult;
+    public float RepositionSpeedMultiplier => (_empowerTimer > 0f ? _empowerSpeedMultiplier : 1f) * _stageMoveSpeedMult * _modRepositionSpeedMult;
+    public float DamageMultiplier => (_empowerTimer > 0f ? _empowerDamageMultiplier : 1f) * _stageDamageMult * _modDamageMult;
 
     public EnemyDefinitionSO Definition
     {
@@ -74,6 +112,11 @@ public class EnemyBrain : MonoBehaviour
         _health = GetComponent<Health>();
         _stagger = GetComponent<StaggerComponent>();
         _strafeSign = Random.value > 0.5f ? 1f : -1f;
+
+        if (_stagger != null)
+            _initialMaxStagger = _stagger.MaxStagger;
+
+        CacheHealthReflection();
     }
 
     private void OnEnable()
@@ -103,6 +146,7 @@ public class EnemyBrain : MonoBehaviour
     private void Start()
     {
         FindPlayer();
+        RebuildModifierCache();
         ApplyDefinitionStats();
         InitializePatterns();
 
@@ -115,6 +159,10 @@ public class EnemyBrain : MonoBehaviour
     public void Bind(EnemyDefinitionSO newDefinition)
     {
         definition = newDefinition;
+        currentStage = 1;
+        staggerBreakCount = 0;
+        ResetStageMultipliers();
+        RebuildModifierCache();
         ApplyDefinitionStats();
         InitializePatterns();
         ResetBrain();
@@ -134,6 +182,26 @@ public class EnemyBrain : MonoBehaviour
         Bind(newDefinition);
     }
 
+    public void AddModifier(EnemyModifierSO modifier)
+    {
+        if (modifier == null || _activeModifiers.Contains(modifier)) return;
+        _activeModifiers.Add(modifier);
+        RecalculateModifiers();
+        ApplyDefinitionStats();
+        if (modifier.ExtraAttackPattern != null && !_patternCooldowns.ContainsKey(modifier.ExtraAttackPattern))
+        {
+            _activePatterns.Add(modifier.ExtraAttackPattern);
+            _patternCooldowns.Add(modifier.ExtraAttackPattern, 0f);
+        }
+    }
+
+    public void ClearModifiers()
+    {
+        _activeModifiers.Clear();
+        RecalculateModifiers();
+        ApplyDefinitionStats();
+    }
+
     public void ApplyEmpower(float duration, float speedMult, float damageMult)
     {
         _empowerTimer = Mathf.Max(_empowerTimer, duration);
@@ -141,10 +209,66 @@ public class EnemyBrain : MonoBehaviour
         _empowerDamageMultiplier = Mathf.Max(_empowerDamageMultiplier, damageMult);
     }
 
+    private void RebuildModifierCache()
+    {
+        _activeModifiers.Clear();
+        if (initialModifiers != null)
+        {
+            for (int i = 0; i < initialModifiers.Count; i++)
+            {
+                if (initialModifiers[i] != null && !_activeModifiers.Contains(initialModifiers[i]))
+                    _activeModifiers.Add(initialModifiers[i]);
+            }
+        }
+        RecalculateModifiers();
+    }
+
+    private void RecalculateModifiers()
+    {
+        _modMoveSpeedMult = 1f;
+        _modRepositionSpeedMult = 1f;
+        _modCooldownMult = 1f;
+        _modDecisionMult = 1f;
+        _modDamageMult = 1f;
+        _modBonusStaggerRes = 0f;
+        _modBonusFlankChance = 0f;
+        _modBonusChainChance = 0f;
+        _modGrantGuard = false;
+        _modGrantSideDash = false;
+        _modForceReposition = false;
+
+        for (int i = 0; i < _activeModifiers.Count; i++)
+        {
+            EnemyModifierSO mod = _activeModifiers[i];
+            if (mod == null) continue;
+
+            _modMoveSpeedMult *= mod.MoveSpeedMultiplier;
+            _modRepositionSpeedMult *= mod.RepositionSpeedMultiplier;
+            _modCooldownMult *= mod.AttackCooldownMultiplier;
+            _modDecisionMult *= mod.DecisionDelayMultiplier;
+            _modDamageMult *= mod.DamageMultiplier;
+            _modBonusStaggerRes += mod.BonusStaggerResistance;
+            _modBonusFlankChance += mod.BonusFlankRepositionChance;
+            _modBonusChainChance += mod.BonusChainChance;
+            if (mod.GrantFrontalGuard) _modGrantGuard = true;
+            if (mod.GrantSideDash) _modGrantSideDash = true;
+            if (mod.ForceRepositionAfterAttack) _modForceReposition = true;
+        }
+    }
+
+    private void ResetStageMultipliers()
+    {
+        _stageMoveSpeedMult = 1f;
+        _stageCooldownMult = 1f;
+        _stageDecisionMult = 1f;
+        _stageDamageMult = 1f;
+    }
+
     private void ApplyDefinitionStats()
     {
         if (definition == null || _stagger == null) return;
-        _stagger.StaggerResistance = definition.BaseStaggerResistance;
+        _stagger.StaggerResistance = Mathf.Clamp(definition.BaseStaggerResistance + _modBonusStaggerRes, 0f, 0.85f);
+        _stagger.MaxStagger = _initialMaxStagger * (1f + staggerBreakCount * definition.StaggerGrowthPerBreak);
     }
 
     public void ResetBrain()
@@ -189,23 +313,41 @@ public class EnemyBrain : MonoBehaviour
         {
             foreach (var p in definition.AttackPatterns)
             {
-                if (p != null && p.swings != null && p.swings.Count > 0 && !_patternCooldowns.ContainsKey(p))
-                {
-                    _activePatterns.Add(p);
-                    _patternCooldowns.Add(p, 0f);
-                }
+                RegisterPatternIfValid(p);
             }
         }
 
-        // Fallback otomatis sesuai archetype jika AttackPatterns belum diisi di Inspector
+        // Daftarkan juga pola serangan tambahan dari BossStages & Modifiers
+        if (definition.BossStages != null)
+        {
+            foreach (var stage in definition.BossStages)
+            {
+                if (stage == null || stage.unlockedPatterns == null) continue;
+                foreach (var p in stage.unlockedPatterns)
+                    RegisterPatternIfValid(p);
+            }
+        }
+
+        for (int i = 0; i < _activeModifiers.Count; i++)
+        {
+            if (_activeModifiers[i] != null)
+                RegisterPatternIfValid(_activeModifiers[i].ExtraAttackPattern);
+        }
+
         if (_activePatterns.Count == 0)
         {
             BuildRuntimeFallbackPatterns();
             foreach (var p in _runtimeFallbackPatterns)
-            {
-                _activePatterns.Add(p);
-                _patternCooldowns.Add(p, 0f);
-            }
+                RegisterPatternIfValid(p);
+        }
+    }
+
+    private void RegisterPatternIfValid(EnemyAttackPatternSO p)
+    {
+        if (p != null && p.swings != null && p.swings.Count > 0 && !_patternCooldowns.ContainsKey(p))
+        {
+            _activePatterns.Add(p);
+            _patternCooldowns.Add(p, 0f);
         }
     }
 
@@ -215,7 +357,6 @@ public class EnemyBrain : MonoBehaviour
 
         if (definition.Archetype == EnemyArchetype.Ranged || definition.Archetype == EnemyArchetype.Ranger)
         {
-            // 1. Focused Shot
             EnemyAttackPatternSO focused = ScriptableObject.CreateInstance<EnemyAttackPatternSO>();
             focused.patternName = "Focused Shot (Runtime)";
             focused.selectionWeight = 60;
@@ -236,12 +377,10 @@ public class EnemyBrain : MonoBehaviour
                 telegraphShape = TelegraphShape.Line,
                 range = definition.AttackRange,
                 width = 0.5f,
-                projectileCount = 1,
-                lungeDistance = 0f
+                projectileCount = 1
             });
             _runtimeFallbackPatterns.Add(focused);
 
-            // 2. Retreat Shot (ketika player mendekat)
             EnemyAttackPatternSO retreat = ScriptableObject.CreateInstance<EnemyAttackPatternSO>();
             retreat.patternName = "Retreat Shot (Runtime)";
             retreat.selectionWeight = 85;
@@ -266,9 +405,8 @@ public class EnemyBrain : MonoBehaviour
             });
             _runtimeFallbackPatterns.Add(retreat);
         }
-        else if (definition.Archetype == EnemyArchetype.Bulwark || definition.Archetype == EnemyArchetype.Elite)
+        else if (definition.Archetype == EnemyArchetype.Bulwark)
         {
-            // 1. Shield Bash (Cone)
             EnemyAttackPatternSO bash = ScriptableObject.CreateInstance<EnemyAttackPatternSO>();
             bash.patternName = "Shield Bash (Runtime)";
             bash.selectionWeight = 55;
@@ -294,7 +432,6 @@ public class EnemyBrain : MonoBehaviour
             });
             _runtimeFallbackPatterns.Add(bash);
 
-            // 2. Ground Slam (Circle - Unparryable)
             EnemyAttackPatternSO slam = ScriptableObject.CreateInstance<EnemyAttackPatternSO>();
             slam.patternName = "Ground Slam (Runtime)";
             slam.selectionWeight = 45;
@@ -312,14 +449,85 @@ public class EnemyBrain : MonoBehaviour
                 recoveryDuration = 0.90f,
                 telegraphShape = TelegraphShape.Circle,
                 range = 3.1f,
-                staggerDamage = 35f,
-                lungeDistance = 0f
+                staggerDamage = 35f
             });
             _runtimeFallbackPatterns.Add(slam);
         }
+        else if (definition.Archetype == EnemyArchetype.Elite || definition.Archetype == EnemyArchetype.Boss)
+        {
+            // Pola 1: Double Cross Chain (Parryable)
+            EnemyAttackPatternSO chainCombo = ScriptableObject.CreateInstance<EnemyAttackPatternSO>();
+            chainCombo.patternName = "Elite Double Slash (Runtime)";
+            chainCombo.selectionWeight = 65;
+            chainCombo.cooldown = 1.6f;
+            chainCombo.minTriggerRange = 0.2f;
+            chainCombo.maxTriggerRange = 2.8f;
+            chainCombo.canBeParried = true;
+            chainCombo.parryStaggerBonus = 40f;
+            chainCombo.baseDamage = definition.AttackDamage;
+            chainCombo.swings.Add(new AttackSwingStep
+            {
+                deliveryType = AttackDeliveryType.Melee,
+                telegraphDuration = 0.45f,
+                startupDuration = 0.10f,
+                executionDuration = 0.10f,
+                recoveryDuration = 0.22f,
+                telegraphShape = TelegraphShape.Cone,
+                range = 2.4f,
+                angle = 100f,
+                staggerDamage = 18f,
+                lungeDistance = 0.75f,
+                lungeDuration = 0.10f
+            });
+            chainCombo.swings.Add(new AttackSwingStep
+            {
+                deliveryType = AttackDeliveryType.Melee,
+                telegraphDuration = 0.32f,
+                startupDuration = 0.10f,
+                executionDuration = 0.12f,
+                recoveryDuration = 0.65f,
+                telegraphShape = TelegraphShape.Cone,
+                range = 2.6f,
+                angle = 115f,
+                damageMultiplier = 1.2f,
+                staggerDamage = 24f,
+                lungeDistance = 0.95f,
+                lungeDuration = 0.12f
+            });
+
+            // Pola 2: Heavy Nova Slam (Stage 2+ atau Chain Follow-up)
+            EnemyAttackPatternSO novaSlam = ScriptableObject.CreateInstance<EnemyAttackPatternSO>();
+            novaSlam.patternName = "Shatter Nova (Runtime)";
+            novaSlam.selectionWeight = 45;
+            novaSlam.cooldown = 3.0f;
+            novaSlam.minTriggerRange = 0.2f;
+            novaSlam.maxTriggerRange = 3.6f;
+            novaSlam.canBeParried = false;
+            novaSlam.baseDamage = definition.AttackDamage * 1.3f;
+            novaSlam.repositionAfterAttack = true;
+            novaSlam.repositionDistance = 2.2f;
+            novaSlam.swings.Add(new AttackSwingStep
+            {
+                deliveryType = AttackDeliveryType.Melee,
+                telegraphDuration = 0.72f,
+                startupDuration = 0.14f,
+                executionDuration = 0.15f,
+                recoveryDuration = 0.85f,
+                telegraphShape = TelegraphShape.Circle,
+                range = 3.4f,
+                staggerDamage = 35f
+            });
+
+            // Sambungkan Double Slash -> Shatter Nova di Stage 2+!
+            chainCombo.chainFollowUpPattern = novaSlam;
+            chainCombo.chainFollowUpChance = 0.75f;
+            chainCombo.chainRequiredPhase = 2;
+
+            _runtimeFallbackPatterns.Add(chainCombo);
+            _runtimeFallbackPatterns.Add(novaSlam);
+        }
         else if (definition.Archetype == EnemyArchetype.Controller)
         {
-            // 1. Summon Hazard (Targeted Zone)
             EnemyAttackPatternSO hazard = ScriptableObject.CreateInstance<EnemyAttackPatternSO>();
             hazard.patternName = "Summon Hazard (Runtime)";
             hazard.selectionWeight = 60;
@@ -345,7 +553,6 @@ public class EnemyBrain : MonoBehaviour
             });
             _runtimeFallbackPatterns.Add(hazard);
 
-            // 2. Empower Allies (Support)
             EnemyAttackPatternSO empower = ScriptableObject.CreateInstance<EnemyAttackPatternSO>();
             empower.patternName = "Empower Allies (Runtime)";
             empower.selectionWeight = 40;
@@ -370,7 +577,6 @@ public class EnemyBrain : MonoBehaviour
         }
         else
         {
-            // Vanguard / Skirmisher fallback
             bool isSkirmisher = definition.Archetype == EnemyArchetype.Skirmisher;
             EnemyAttackPatternSO slash = ScriptableObject.CreateInstance<EnemyAttackPatternSO>();
             slash.patternName = isSkirmisher ? "Quick Cross Slash (Runtime)" : "Basic Slash (Runtime)";
@@ -424,6 +630,7 @@ public class EnemyBrain : MonoBehaviour
 
         float dt = Time.deltaTime;
         TickCooldowns(dt);
+        EvaluateBossStageTransitions();
         UpdateGuardState();
         UpdateDebugInfo();
 
@@ -459,6 +666,72 @@ public class EnemyBrain : MonoBehaviour
         }
     }
 
+    private void EvaluateBossStageTransitions()
+    {
+        if (!IsEliteOrBoss || currentState == EnemyBrainState.Dead || currentState == EnemyBrainState.Staggered)
+            return;
+
+        float hpRatio = GetNormalizedHealth();
+
+        // 1. Jika ada konfigurasi BossStages di EnemyDefinitionSO
+        if (definition.BossStages != null && definition.BossStages.Count > 0)
+        {
+            int targetStageIndex = currentStage - 2; // Stage 2 berada di index 0
+            int nextIndex = currentStage - 1;
+
+            if (nextIndex < definition.BossStages.Count)
+            {
+                BossStageConfig nextCfg = definition.BossStages[nextIndex];
+                if (nextCfg != null)
+                {
+                    bool hpTriggered = hpRatio <= nextCfg.hpThresholdNormalized;
+                    bool staggerTriggered = nextCfg.staggerBreaksRequired > 0 && staggerBreakCount >= nextCfg.staggerBreaksRequired;
+
+                    if (hpTriggered || staggerTriggered)
+                    {
+                        EnterBossStage(currentStage + 1, nextCfg);
+                    }
+                }
+            }
+            return;
+        }
+
+        // 2. Fallback otomatis untuk Elite/Boss tanpa daftar BossStages manual (masuk Stage 2 saat HP <= 55% atau setelah 1x Stagger Break)
+        if (currentStage == 1 && (hpRatio <= 0.55f || staggerBreakCount >= 1))
+        {
+            BossStageConfig runtimeEnrage = new BossStageConfig
+            {
+                stageName = "Enraged Phase",
+                moveSpeedMultiplier = 1.22f,
+                cooldownMultiplier = 0.72f,
+                decisionDelayMultiplier = 0.65f,
+                damageMultiplier = 1.18f
+            };
+            EnterBossStage(2, runtimeEnrage);
+        }
+    }
+
+    private void EnterBossStage(int newStage, BossStageConfig cfg)
+    {
+        currentStage = newStage;
+        _stageMoveSpeedMult = cfg.moveSpeedMultiplier;
+        _stageCooldownMult = cfg.cooldownMultiplier;
+        _stageDecisionMult = cfg.decisionDelayMultiplier;
+        _stageDamageMult = cfg.damageMultiplier;
+
+        // Reset cooldown pola agar pola serangan baru segera tersedia
+        var keys = new List<EnemyAttackPatternSO>(_patternCooldowns.Keys);
+        foreach (var k in keys)
+            _patternCooldowns[k] = 0f;
+
+        if (cfg.stageTransitionPattern != null && cfg.stageTransitionPattern.swings.Count > 0)
+        {
+            _attackController.AbortAttack();
+            _movement.CancelLunge();
+            CommitPattern(cfg.stageTransitionPattern);
+        }
+    }
+
     private void TickCooldowns(float dt)
     {
         if (_empowerTimer > 0f)
@@ -469,7 +742,6 @@ public class EnemyBrain : MonoBehaviour
 
         if (_patternCooldowns.Count == 0) return;
 
-        // Empower juga mempercepat pemulihan cooldown serangan musuh
         float cdStep = dt * (_empowerTimer > 0f ? 1.25f : 1f);
 
         var keys = new List<EnemyAttackPatternSO>(_patternCooldowns.Keys);
@@ -480,15 +752,12 @@ public class EnemyBrain : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Bulwark mengaktifkan Guard Stance saat tidak sedang menyerang atau staggered,
-    /// menciptakan ritme jelas: serang saat recovery/flank atau parry serangannya.
-    /// </summary>
     private void UpdateGuardState()
     {
         if (_stagger == null) return;
 
-        if (!definition.HasFrontalGuard)
+        bool hasGuard = definition.HasFrontalGuard || _modGrantGuard;
+        if (!hasGuard)
         {
             _stagger.IsGuardActive = false;
             return;
@@ -532,7 +801,7 @@ public class EnemyBrain : MonoBehaviour
 
         int mask = definition.ObstacleLayerMask.value != 0
             ? definition.ObstacleLayerMask.value
-            : (1 << 9); // Default Environment layer
+            : (1 << 9);
 
         return !Physics.Raycast(origin, dir.normalized, dist, mask, QueryTriggerInteraction.Ignore);
     }
@@ -555,7 +824,8 @@ public class EnemyBrain : MonoBehaviour
     {
         return definition.Archetype == EnemyArchetype.Skirmisher ||
                definition.PreferredZone == PreferredCombatZone.Flank ||
-               definition.PreferredZone == PreferredCombatZone.Rear;
+               definition.PreferredZone == PreferredCombatZone.Rear ||
+               _modGrantSideDash;
     }
 
     private bool IsRangedArchetype()
@@ -591,7 +861,8 @@ public class EnemyBrain : MonoBehaviour
 
             case EnemyBrainState.Positioning:
                 _movement.Stop();
-                _decisionTimer = Random.Range(definition.AttackDecisionDelay.x, definition.AttackDecisionDelay.y);
+                float rawDelay = Random.Range(definition.AttackDecisionDelay.x, definition.AttackDecisionDelay.y);
+                _decisionTimer = rawDelay * _stageDecisionMult * _modDecisionMult;
                 _strafeSwitchTimer = Random.Range(0.7f, 1.3f);
                 break;
 
@@ -645,7 +916,7 @@ public class EnemyBrain : MonoBehaviour
                 float dist = _selectedPattern != null ? _selectedPattern.repositionDistance : 2.0f;
                 _repositionDestination = _movement.GetRepositionPoint(_playerTarget.position, dist);
                 _stateDuration = 0.85f;
-                _movement.MoveTo(_repositionDestination, definition.RepositionSpeed * SpeedMultiplier);
+                _movement.MoveTo(_repositionDestination, definition.RepositionSpeed * RepositionSpeedMultiplier);
                 break;
 
             case EnemyBrainState.Dead:
@@ -693,7 +964,6 @@ public class EnemyBrain : MonoBehaviour
         _movement.FacePosition(_playerTarget.position, definition.RotationSpeed);
         ApplySpacing(dt);
 
-        // Ranger / Controller: jika player terlalu dekat, segera masuk Positioning/Retreat agar bisa Retreat Shot
         if (IsRangedArchetype() && definition.MinSafeDistance > 0f && dist <= definition.MinSafeDistance)
         {
             ChangeState(EnemyBrainState.Positioning);
@@ -736,7 +1006,6 @@ public class EnemyBrain : MonoBehaviour
             _strafeSwitchTimer = Random.Range(0.8f, 1.5f);
         }
 
-        // Khusus Ranger: pastikan ada garis pandang (Line of Sight) ke player sebelum menembak
         if (definition.RequireLineOfSight && !HasClearLineOfSightToPlayer())
         {
             Vector3 sightPoint = _movement.GetLateralSightlinePoint(_playerTarget.position, _strafeSign, 2.5f);
@@ -744,10 +1013,8 @@ public class EnemyBrain : MonoBehaviour
             return;
         }
 
-        // Khusus Ranger / Controller: jika player menerobos masuk ke jarak terlalu dekat
         if (IsRangedArchetype() && definition.MinSafeDistance > 0f && dist < definition.MinSafeDistance)
         {
-            // Coba pilih serangan jarak dekat / Retreat Shot terlebih dahulu sebelum mundur biasa
             EnemyAttackPatternSO closePattern = SelectAvailablePattern(dist);
             if (closePattern != null && (CombatDirector.Instance == null || CombatDirector.Instance.TryRequestAttackSlot(this)))
             {
@@ -771,10 +1038,10 @@ public class EnemyBrain : MonoBehaviour
         _decisionTimer -= dt;
         if (_decisionTimer > 0f) return;
 
-        // Skirmisher menghindari garis pandang depan player sebelum menyerang
-        if (IsFlankerArchetype() && IsInPlayerFrontArc() && Random.value < definition.FlankRepositionChance)
+        float effectiveFlankChance = Mathf.Clamp01(definition.FlankRepositionChance + _modBonusFlankChance);
+        if (IsFlankerArchetype() && IsInPlayerFrontArc() && Random.value < effectiveFlankChance)
         {
-            if (definition.CanSideDash && _sideDashCooldownTimer <= 0f)
+            if ((definition.CanSideDash || _modGrantSideDash) && _sideDashCooldownTimer <= 0f)
             {
                 TriggerSideDashReposition();
                 return;
@@ -814,7 +1081,11 @@ public class EnemyBrain : MonoBehaviour
         _selectedPattern = pattern;
         _currentSwingIndex = 0;
         currentPatternDebug = _selectedPattern.patternName;
-        _patternCooldowns[_selectedPattern] = _selectedPattern.cooldown;
+
+        if (!_patternCooldowns.ContainsKey(_selectedPattern))
+            _patternCooldowns.Add(_selectedPattern, 0f);
+
+        _patternCooldowns[_selectedPattern] = _selectedPattern.cooldown * _stageCooldownMult * _modCooldownMult;
         ChangeState(EnemyBrainState.Telegraph);
     }
 
@@ -852,6 +1123,7 @@ public class EnemyBrain : MonoBehaviour
         _stateTimer += dt;
         if (_stateTimer < _stateDuration) return;
 
+        // 1. Lanjutkan swing berikutnya dalam pattern yang sama
         if (_selectedPattern != null && _currentSwingIndex + 1 < _selectedPattern.swings.Count)
         {
             _currentSwingIndex++;
@@ -859,7 +1131,26 @@ public class EnemyBrain : MonoBehaviour
             return;
         }
 
-        bool shouldReposition = _selectedPattern != null && _selectedPattern.repositionAfterAttack;
+        // 2. Phase 4 Attack Chain: sambung langsung ke follow-up pattern jika memenuhi syarat fase & jarak
+        if (_selectedPattern != null &&
+            _selectedPattern.chainFollowUpPattern != null &&
+            _selectedPattern.chainFollowUpPattern.swings.Count > 0 &&
+            currentStage >= _selectedPattern.chainRequiredPhase)
+        {
+            float dist = DistanceToPlayer();
+            EnemyAttackPatternSO nextChain = _selectedPattern.chainFollowUpPattern;
+            float effectiveChainChance = Mathf.Clamp01(_selectedPattern.chainFollowUpChance + _modBonusChainChance);
+
+            if (dist >= nextChain.minTriggerRange &&
+                dist <= nextChain.maxTriggerRange &&
+                Random.value < effectiveChainChance)
+            {
+                CommitPattern(nextChain);
+                return;
+            }
+        }
+
+        bool shouldReposition = (_selectedPattern != null && _selectedPattern.repositionAfterAttack) || _modForceReposition;
         ReleaseDirectorSlot();
 
         if (shouldReposition)
@@ -874,7 +1165,10 @@ public class EnemyBrain : MonoBehaviour
         if (_stateTimer >= _stateDuration)
         {
             if (_stagger != null)
+            {
                 _stagger.ResetStagger();
+                ApplyDefinitionStats(); // Perbarui MaxStagger sesuai StaggerGrowthPerBreak
+            }
 
             ChangeState(EnemyBrainState.Approach);
         }
@@ -908,13 +1202,15 @@ public class EnemyBrain : MonoBehaviour
             if (pattern == null || pattern.swings == null || pattern.swings.Count == 0)
                 continue;
 
+            if (currentStage < pattern.minBossPhase || currentStage > pattern.maxBossPhase)
+                continue;
+
             if (_patternCooldowns.TryGetValue(pattern, out float cd) && cd > 0f)
                 continue;
 
             if (currentDistance < pattern.minTriggerRange || currentDistance > pattern.maxTriggerRange)
                 continue;
 
-            // Jangan gunakan SupportEmpower jika tidak ada musuh lain di sekitar Controller
             if (pattern.swings[0].deliveryType == AttackDeliveryType.SupportEmpower && !HasNearbyAllies(pattern.swings[0].empowerRadius))
                 continue;
 
@@ -960,7 +1256,6 @@ public class EnemyBrain : MonoBehaviour
 
         if (_stagger != null)
         {
-            // Sukses Parry selalu menembus Guard/Stagger Resistance Bulwark
             _stagger.Add(staggerBonus, true);
             if (currentState == EnemyBrainState.Staggered)
                 return;
@@ -978,6 +1273,7 @@ public class EnemyBrain : MonoBehaviour
     private void HandleStaggerBroken()
     {
         if (currentState == EnemyBrainState.Dead) return;
+        staggerBreakCount++;
         ChangeState(EnemyBrainState.Staggered);
     }
 
@@ -990,5 +1286,36 @@ public class EnemyBrain : MonoBehaviour
     {
         if (CombatDirector.Instance != null)
             CombatDirector.Instance.ReleaseAttackSlot(this);
+    }
+
+    private void CacheHealthReflection()
+    {
+        if (_health == null) return;
+        var t = _health.GetType();
+        const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+
+        _healthCurField = t.GetField("Current", flags) ?? t.GetField("CurrentHealth", flags) ?? t.GetField("currentHealth", flags);
+        _healthMaxField = t.GetField("Max", flags) ?? t.GetField("MaxHealth", flags) ?? t.GetField("maxHealth", flags);
+        _healthCurProp = t.GetProperty("Current", flags) ?? t.GetProperty("CurrentHealth", flags);
+        _healthMaxProp = t.GetProperty("Max", flags) ?? t.GetProperty("MaxHealth", flags);
+    }
+
+    private float GetNormalizedHealth()
+    {
+        if (_health == null) return 1f;
+
+        float cur = -1f;
+        float max = -1f;
+
+        if (_healthCurField != null) cur = System.Convert.ToSingle(_healthCurField.GetValue(_health));
+        else if (_healthCurProp != null) cur = System.Convert.ToSingle(_healthCurProp.GetValue(_health));
+
+        if (_healthMaxField != null) max = System.Convert.ToSingle(_healthMaxField.GetValue(_health));
+        else if (_healthMaxProp != null) max = System.Convert.ToSingle(_healthMaxProp.GetValue(_health));
+
+        if (cur >= 0f && max > 0f)
+            return Mathf.Clamp01(cur / max);
+
+        return 1f;
     }
 }

@@ -21,7 +21,8 @@ MonoBehaviour:
   parryStaggerBonus: 35
   baseDamage: 8
   swings:
-  - telegraphDuration: 0.38
+  - deliveryType: 0
+    telegraphDuration: 0.38
     startupDuration: 0.1
     executionDuration: 0.08
     recoveryDuration: 0.15
@@ -34,7 +35,19 @@ MonoBehaviour:
     lungeDistance: 0.6
     lungeDuration: 0
     lockRotationOnStartup: 0
-  - telegraphDuration: 0.28
+    projectileCount: 1
+    projectileSpreadAngle: 18
+    zoneRadius: 2
+    zonePersistDuration: 0
+    zoneTickInterval: 0.65
+    trackPlayerDuringTelegraph: 1
+    customHazardPrefab: {fileID: 0}
+    empowerRadius: 7.5
+    empowerDuration: 5
+    empowerSpeedMultiplier: 1.25
+    empowerDamageMultiplier: 1.2
+  - deliveryType: 0
+    telegraphDuration: 0.28
     startupDuration: 0.1
     executionDuration: 0.08
     recoveryDuration: 0.65
@@ -47,5 +60,16 @@ MonoBehaviour:
     lungeDistance: 0.8
     lungeDuration: 0
     lockRotationOnStartup: 0
+    projectileCount: 1
+    projectileSpreadAngle: 18
+    zoneRadius: 2
+    zonePersistDuration: 0
+    zoneTickInterval: 0.65
+    trackPlayerDuringTelegraph: 1
+    customHazardPrefab: {fileID: 0}
+    empowerRadius: 7.5
+    empowerDuration: 5
+    empowerSpeedMultiplier: 1.25
+    empowerDamageMultiplier: 1.2
   repositionAfterAttack: 1
   repositionDistance: 1.6

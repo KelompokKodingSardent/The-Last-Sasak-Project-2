@@ -26,7 +26,10 @@ public class DodgeController : MonoBehaviour
     void Start()
     {
         if (config == null && motor != null)
+        {
+            GetComponent<ArtifactController>()?.NotifyDodgeSuccess();
             config = motor.Config;
+        }
     }
 
     public void BindConfig(PlayerMovementConfig movementConfig)

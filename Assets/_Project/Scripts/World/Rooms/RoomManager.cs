@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class RoomManager : MonoBehaviour
@@ -9,6 +10,14 @@ public class RoomManager : MonoBehaviour
     public RoomController[] ExampleRooms;
     public Transform Player;
     public bool StartOnPlay = true;
+
+    [Header("Phase 5 — Run Progression & Roguelike Reward")]
+    [SerializeField] private int runDepth = 1;
+    public bool GrantRandomArtifactOnClear = true;
+    public List<GameplayArtifactSO> RunArtifactPool = new List<GameplayArtifactSO>();
+
+    public int RunDepth => runDepth;
+
     RoomEncounterController encounter;
     int index;
 
@@ -28,6 +37,8 @@ public class RoomManager : MonoBehaviour
             if (player != null)
                 Player = player.transform;
         }
+
+        runDepth = 1;
 
         if (ExampleRooms != null && ExampleRooms.Length > 0)
             Activate(ExampleRooms[0], Player);
@@ -56,6 +67,8 @@ public class RoomManager : MonoBehaviour
     {
         if (player == null)
             return;
+
+        runDepth++;
 
         if (ExampleRooms != null && ExampleRooms.Length > 0)
         {
@@ -97,5 +110,33 @@ public class RoomManager : MonoBehaviour
     void HandleCleared()
     {
         ActiveRoom?.SetCleared(true);
+
+        if (GrantRandomArtifactOnClear && Player != null)
+        {
+            ArtifactController artCtrl = Player.GetComponent<ArtifactController>();
+            if (artCtrl != null)
+            {
+                GameplayArtifactSO reward = PickArtifactReward();
+                if (reward != null)
+                    artCtrl.EquipGameplayArtifact(reward);
+            }
+        }
+    }
+
+    private GameplayArtifactSO PickArtifactReward()
+    {
+        if (RunArtifactPool != null && RunArtifactPool.Count > 0)
+            return RunArtifactPool[Random.Range(0, RunArtifactPool.Count)];
+
+        ArtifactPlaystyleType[] styles =
+        {
+            ArtifactPlaystyleType.AggressiveCombo,
+            ArtifactPlaystyleType.ParryCounter,
+            ArtifactPlaystyleType.DodgeMobility,
+            ArtifactPlaystyleType.StaggerBreaker,
+            ArtifactPlaystyleType.CriticalExecution,
+            ArtifactPlaystyleType.SoulRecovery
+        };
+        return GameplayArtifactSO.CreateRuntime(styles[Random.Range(0, styles.Length)]);
     }
 }

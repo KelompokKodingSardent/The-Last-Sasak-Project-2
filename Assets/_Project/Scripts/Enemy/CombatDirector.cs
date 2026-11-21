@@ -4,10 +4,10 @@ using UnityEngine.AI;
 
 public enum EnemyTacticalRole
 {
-    Engage,     // Mendapat izin menyerang / menekan langsung
-    Flank,      // Mencari sudut samping / belakang player
-    Hold,       // Menjaga jarak / menunggu giliran di slotnya
-    Reposition  // Sedang mundur atau bergeser mencari sudut baru
+    Engage,
+    Flank,
+    Hold,
+    Reposition
 }
 
 public enum CombatSector
@@ -23,7 +23,7 @@ public class CombatDirector : MonoBehaviour
 {
     public static CombatDirector Instance { get; private set; }
 
-    [Header("Attack Budget (Phase 2)")]
+    [Header("Attack Budget (Phase 2-4)")]
     [SerializeField] private int maxConcurrentMeleeAttackers = 1;
     [SerializeField] private int maxConcurrentFlankers = 2;
     [SerializeField] private int maxConcurrentRangedAttackers = 1;
@@ -86,6 +86,13 @@ public class CombatDirector : MonoBehaviour
 
         CleanupInvalidEntries();
 
+        // Elite dan Boss selalu mendapat prioritas serangan agar tidak tertahan oleh minion
+        if (requester is EnemyBrain brain && brain.IsEliteOrBoss)
+        {
+            _assignedRoles[brain] = EnemyTacticalRole.Engage;
+            return true;
+        }
+
         bool isRanged = IsRangedRequester(requester);
         HashSet<Component> pool = isRanged ? _activeRangedAttackers : _activeMeleeAttackers;
         int limit = isRanged ? maxConcurrentRangedAttackers : maxConcurrentMeleeAttackers;
@@ -98,8 +105,8 @@ public class CombatDirector : MonoBehaviour
 
         pool.Add(requester);
 
-        if (requester is EnemyBrain brain)
-            _assignedRoles[brain] = EnemyTacticalRole.Engage;
+        if (requester is EnemyBrain normalBrain)
+            _assignedRoles[normalBrain] = EnemyTacticalRole.Engage;
 
         return true;
     }
@@ -136,11 +143,6 @@ public class CombatDirector : MonoBehaviour
         return CombatSector.Front;
     }
 
-    /// <summary>
-    /// Menghitung titik tujuan taktis di NavMesh berdasarkan sektor yang diberikan ke musuh.
-    /// Jika Skirmisher harus menyeberang dari depan player ke sisi belakang/berlawanan,
-    /// fungsi ini mengembalikan waypoint memutar (wide-arc) agar tidak menabrak hitbox player.
-    /// </summary>
     public Vector3 GetTacticalMoveTarget(EnemyBrain enemy, Transform player, float desiredDistance)
     {
         if (enemy == null || player == null)
@@ -159,7 +161,6 @@ public class CombatDirector : MonoBehaviour
         float angleOffset = GetSectorAngle(sector, def);
         Vector3 targetDir = Quaternion.Euler(0f, angleOffset, 0f) * playerForward;
 
-        // Tambahkan sedikit spread jika lebih dari satu musuh berada di sektor yang sama
         int sameSectorRank = GetSameSectorRank(enemy, sector);
         if (sameSectorRank > 0)
         {
@@ -169,8 +170,6 @@ public class CombatDirector : MonoBehaviour
 
         Vector3 desiredPoint = playerPos + targetDir * desiredDistance;
 
-        // Jika Skirmisher ingin ke Rear/Flank seberang sementara posisinya berada di depan player,
-        // arahkan dulu ke titik lambung luar (wide-arc waypoint) agar pergerakan terlihat cerdas.
         if (def != null && (def.PreferredZone == PreferredCombatZone.Flank || def.PreferredZone == PreferredCombatZone.Rear))
         {
             Vector3 toEnemy = enemy.transform.position - playerPos;
@@ -180,7 +179,6 @@ public class CombatDirector : MonoBehaviour
                 float signedCurrent = Vector3.SignedAngle(playerForward, toEnemy.normalized, Vector3.up);
                 float signedTarget = Vector3.SignedAngle(playerForward, targetDir, Vector3.up);
 
-                // Sedang berada di depan player (|signedCurrent| < 45) dan target ada di sisi belakang/seberang
                 if (Mathf.Abs(signedCurrent) < def.PlayerFacingAvoidAngle && Mathf.Abs(signedTarget) > 75f)
                 {
                     float sideSign = signedTarget >= 0f ? 1f : -1f;
@@ -196,7 +194,6 @@ public class CombatDirector : MonoBehaviour
         if (TrySampleWalkablePoint(desiredPoint, 2.2f, out Vector3 validPoint))
             return validPoint;
 
-        // Fallback: cari sudut alternatif yang valid di NavMesh
         for (int step = 1; step <= 4; step++)
         {
             float altAngle = step * 35f * (step % 2 == 0 ? -1f : 1f);
@@ -258,7 +255,6 @@ public class CombatDirector : MonoBehaviour
 
         int activeFlankers = 0;
 
-        // Urutkan evaluasi: musuh yang paling dekat dengan player mendapat prioritas klaim slot lebih dulu
         _registeredEnemies.Sort((a, b) =>
         {
             if (a == null) return 1;
@@ -274,7 +270,6 @@ public class CombatDirector : MonoBehaviour
             if (enemy == null || enemy.CurrentState == EnemyBrainState.Dead || enemy.Definition == null)
                 continue;
 
-            // Jangan ganggu musuh yang sedang mengeksekusi serangan atau staggered
             if (enemy.CurrentState == EnemyBrainState.Telegraph ||
                 enemy.CurrentState == EnemyBrainState.Startup ||
                 enemy.CurrentState == EnemyBrainState.Execution ||
@@ -315,7 +310,6 @@ public class CombatDirector : MonoBehaviour
             }
             else
             {
-                // Jika slot Front sudah terlalu penuh, alihkan Vanguard berlebih ke sisi samping agar tidak menumpuk
                 int frontCount = CountEnemiesInSector(CombatSector.Front, enemy);
                 if (frontCount >= 2 && activeFlankers < maxConcurrentFlankers)
                 {
@@ -327,7 +321,7 @@ public class CombatDirector : MonoBehaviour
                 else
                 {
                     _assignedSectors[enemy] = CombatSector.Front;
-                    _assignedRoles[enemy] = _activeMeleeAttackers.Contains(enemy)
+                    _assignedRoles[enemy] = (_activeMeleeAttackers.Contains(enemy) || enemy.IsEliteOrBoss)
                         ? EnemyTacticalRole.Engage
                         : EnemyTacticalRole.Hold;
                 }
@@ -371,21 +365,17 @@ public class CombatDirector : MonoBehaviour
         float angle = GetSectorAngle(sector, def);
         Vector3 slotPos = player.position + (Quaternion.Euler(0f, angle, 0f) * playerForward * dist);
 
-        // 1. Occupancy penalty (hindari sektor yang sudah diisi musuh lain)
         int occupants = CountEnemiesInSector(sector, enemy);
         float score = -occupants * 6.0f;
 
-        // 2. Distance score (lebih suka sektor yang lebih dekat dengan posisi musuh saat ini)
         float travelDist = Vector3.Distance(enemy.transform.position, slotPos);
         score -= travelDist * 0.8f;
 
-        // 3. Player Facing bonus (sektor di luar pandangan depan player lebih menguntungkan untuk flank)
         if (sector == CombatSector.Rear)
             score += 2.2f;
         else if (sector == CombatSector.LeftFlank || sector == CombatSector.RightFlank)
             score += 1.5f;
 
-        // 4. Navigation check (penalti besar jika titik tidak valid di NavMesh)
         if (!TrySampleWalkablePoint(slotPos, 1.8f, out _))
             score -= 20f;
 

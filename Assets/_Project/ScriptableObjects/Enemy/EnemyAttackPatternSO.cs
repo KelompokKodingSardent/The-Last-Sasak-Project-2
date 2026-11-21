@@ -93,4 +93,12 @@ public class EnemyAttackPatternSO : ScriptableObject
     [Header("Post-Attack Reposition")]
     public bool repositionAfterAttack = false;
     public float repositionDistance = 1.8f;
+
+    [Header("Phase 4 — Multi-Stage Gate & Attack Chain")]
+    [Min(1)] public int minBossPhase = 1;
+    [Min(1)] public int maxBossPhase = 99;
+    [Tooltip("Opsional: pattern lanjutan yang langsung dieksekusi setelah recovery tanpa kembali ke Approach")]
+    public EnemyAttackPatternSO chainFollowUpPattern;
+    [Range(0f, 1f)] public float chainFollowUpChance = 0f;
+    [Min(1)] public int chainRequiredPhase = 1;
 }
