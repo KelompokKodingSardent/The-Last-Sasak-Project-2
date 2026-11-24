@@ -1,5 +1,5 @@
+// ArtifactController.cs (Tanpa Reflection & terintegrasi ke PlayerStatController)
 using System.Collections.Generic;
-using System.Reflection;
 using UnityEngine;
 
 public interface IStatModifier
@@ -25,26 +25,20 @@ public class ArtifactController : MonoBehaviour, IStatModifier
     private float _comboResetTimer;
     private float _activeCounterMultiplier = 1f;
     private Health _playerHealth;
-
-    private FieldInfo _healthCurField;
-    private PropertyInfo _healthCurProp;
-    private MethodInfo _healMethod;
+    private PlayerStatController _statController;
 
     private void Awake()
     {
         _playerHealth = GetComponent<Health>();
-        CacheHealthReflection();
+        _statController = GetComponent<PlayerStatController>();
     }
 
     private void Start()
     {
         if (Artifact != null)
             Equip(Artifact);
-
-        for (int i = 0; i < EquippedGameplayArtifacts.Count; i++)
-        {
-            ApplyArtifactStatBonuses(EquippedGameplayArtifacts[i]);
-        }
+        else
+            RecalculateArtifactStats();
     }
 
     private void OnEnable()
@@ -80,17 +74,10 @@ public class ArtifactController : MonoBehaviour, IStatModifier
         totalContextualMultiplier = GetCurrentBaseAndBuffMultiplier();
     }
 
-    // Kompatibilitas penuh dengan sistem lama
     public void Equip(ArtifactDefinitionSO definition)
     {
         Artifact = definition;
-        if (definition == null)
-            return;
-
-        DamageMultiplier = definition.DamageMultiplier;
-        HealthBonus = definition.HealthBonus;
-        if (_playerHealth != null && HealthBonus > 0f)
-            _playerHealth.Configure(_playerHealth.MaxHealth + HealthBonus);
+        RecalculateArtifactStats();
     }
 
     public void EquipGameplayArtifact(GameplayArtifactSO artifact)
@@ -99,38 +86,49 @@ public class ArtifactController : MonoBehaviour, IStatModifier
             return;
 
         EquippedGameplayArtifacts.Add(artifact);
-        ApplyArtifactStatBonuses(artifact);
+        RecalculateArtifactStats();
     }
 
-    private void ApplyArtifactStatBonuses(GameplayArtifactSO artifact)
+    public float GetTotalMaxHealthBonus()
     {
-        if (artifact == null) return;
-
-        if (artifact.BaseDamageMultiplier > 0f && !Mathf.Approximately(artifact.BaseDamageMultiplier, 1f))
-            DamageMultiplier *= artifact.BaseDamageMultiplier;
-
-        if (artifact.MaxHealthBonus > 0f && _playerHealth != null)
+        float total = Artifact != null ? Artifact.HealthBonus : 0f;
+        for (int i = 0; i < EquippedGameplayArtifacts.Count; i++)
         {
-            HealthBonus += artifact.MaxHealthBonus;
-            _playerHealth.Configure(_playerHealth.MaxHealth + artifact.MaxHealthBonus);
+            if (EquippedGameplayArtifacts[i] != null)
+                total += EquippedGameplayArtifacts[i].MaxHealthBonus;
         }
+        return total;
     }
 
-    // Dipanggil oleh AttackController / CombatSystem melalui IStatModifier
+    public float GetPassiveDamageMultiplier()
+    {
+        float mult = Artifact != null && Artifact.DamageMultiplier > 0f ? Artifact.DamageMultiplier : 1f;
+        for (int i = 0; i < EquippedGameplayArtifacts.Count; i++)
+        {
+            GameplayArtifactSO art = EquippedGameplayArtifacts[i];
+            if (art != null && art.BaseDamageMultiplier > 0f)
+                mult *= art.BaseDamageMultiplier;
+        }
+        return mult;
+    }
+
+    private void RecalculateArtifactStats()
+    {
+        DamageMultiplier = GetPassiveDamageMultiplier();
+        HealthBonus = GetTotalMaxHealthBonus();
+
+        if (_statController != null)
+            _statController.RecalculateStats(resetHealthToFull: false);
+    }
+
     public float Modify(float baseValue)
     {
         RegisterComboHit();
         return baseValue * GetCurrentBaseAndBuffMultiplier();
     }
 
-    public float ApplyDamage(float amount)
-    {
-        return Modify(amount);
-    }
+    public float ApplyDamage(float amount) => Modify(amount);
 
-    /// <summary>
-    /// Evaluasi damage kontekstual terhadap target tertentu (Staggered, Backstab, Recovery, Combo, Counter).
-    /// </summary>
     public float EvaluateContextualDamage(float baseValue, GameObject target)
     {
         RegisterComboHit();
@@ -164,9 +162,6 @@ public class ArtifactController : MonoBehaviour, IStatModifier
         return baseValue * mult;
     }
 
-    /// <summary>
-    /// Dipanggil saat player berhasil melakukan Parry terhadap serangan musuh.
-    /// </summary>
     public void NotifyParrySuccess(GameObject parriedEnemy)
     {
         float extraStagger = 0f;
@@ -190,9 +185,6 @@ public class ArtifactController : MonoBehaviour, IStatModifier
         }
     }
 
-    /// <summary>
-    /// Dipanggil saat player melakukan Dodge.
-    /// </summary>
     public void NotifyDodgeSuccess()
     {
         for (int i = 0; i < EquippedGameplayArtifacts.Count; i++)
@@ -268,8 +260,8 @@ public class ArtifactController : MonoBehaviour, IStatModifier
                 totalHeal += EquippedGameplayArtifacts[i].HealOnKill;
         }
 
-        if (totalHeal > 0f)
-            HealPlayer(totalHeal);
+        if (totalHeal > 0f && _playerHealth != null)
+            _playerHealth.Heal(totalHeal);
     }
 
     private void HandleRoomCleared()
@@ -281,42 +273,7 @@ public class ArtifactController : MonoBehaviour, IStatModifier
                 totalHeal += EquippedGameplayArtifacts[i].HealOnRoomClear;
         }
 
-        if (totalHeal > 0f)
-            HealPlayer(totalHeal);
-    }
-
-    private void HealPlayer(float amount)
-    {
-        if (_playerHealth == null || amount <= 0f) return;
-
-        if (_healMethod != null)
-        {
-            _healMethod.Invoke(_playerHealth, new object[] { amount });
-            return;
-        }
-
-        if (_healthCurField != null)
-        {
-            float cur = System.Convert.ToSingle(_healthCurField.GetValue(_playerHealth));
-            float next = Mathf.Min(_playerHealth.MaxHealth, cur + amount);
-            _healthCurField.SetValue(_playerHealth, next);
-        }
-        else if (_healthCurProp != null && _healthCurProp.CanWrite)
-        {
-            float cur = System.Convert.ToSingle(_healthCurProp.GetValue(_playerHealth));
-            float next = Mathf.Min(_playerHealth.MaxHealth, cur + amount);
-            _healthCurProp.SetValue(_playerHealth, next);
-        }
-    }
-
-    private void CacheHealthReflection()
-    {
-        if (_playerHealth == null) return;
-        var t = _playerHealth.GetType();
-        const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-
-        _healMethod = t.GetMethod("Heal", flags) ?? t.GetMethod("Restore", flags) ?? t.GetMethod("AddHealth", flags);
-        _healthCurField = t.GetField("Current", flags) ?? t.GetField("CurrentHealth", flags) ?? t.GetField("currentHealth", flags);
-        _healthCurProp = t.GetProperty("Current", flags) ?? t.GetProperty("CurrentHealth", flags);
+        if (totalHeal > 0f && _playerHealth != null)
+            _playerHealth.Heal(totalHeal);
     }
 }

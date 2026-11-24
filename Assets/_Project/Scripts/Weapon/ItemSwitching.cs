@@ -1,15 +1,24 @@
+// ItemSwitching.cs
 using UnityEngine;
 
 public class ItemSwitching : MonoBehaviour
 {
     public AttackDefinitionSO[] Attacks;
     public int Index;
+
     AttackController attack;
+    EquipmentController equipment;
+    PlayerInputReader input;
+    PlayerActionController actions;
 
     void Awake()
     {
         attack = GetComponent<AttackController>();
-        if (Attacks == null || Attacks.Length == 0)
+        equipment = GetComponent<EquipmentController>();
+        input = GetComponent<PlayerInputReader>();
+        actions = GetComponent<PlayerActionController>();
+
+        if ((equipment == null || equipment.ActiveWeapon == null) && (Attacks == null || Attacks.Length == 0))
         {
             Attacks = new[]
             {
@@ -22,22 +31,22 @@ public class ItemSwitching : MonoBehaviour
 
     void Update()
     {
-        KeyboardSwap();
-    }
-
-    void KeyboardSwap()
-    {
-        if (Attacks == null || Attacks.Length == 0)
+        if (input == null || input.WeaponSlotPressed < 0)
             return;
 
-        UnityEngine.InputSystem.Keyboard kb = UnityEngine.InputSystem.Keyboard.current;
-        if (kb == null)
+        if (actions != null && !actions.CanSwitchWeapon())
             return;
 
-        if (kb.digit1Key.wasPressedThisFrame)
-            Equip(0);
-        if (kb.digit2Key.wasPressedThisFrame)
-            Equip(1);
+        int slot = input.WeaponSlotPressed;
+
+        if (equipment != null && (equipment.WeaponSlot1 != null || equipment.WeaponSlot2 != null))
+        {
+            if (equipment.SwitchWeaponSlot(slot))
+                Index = slot;
+            return;
+        }
+
+        Equip(slot);
     }
 
     public void Equip(int index)

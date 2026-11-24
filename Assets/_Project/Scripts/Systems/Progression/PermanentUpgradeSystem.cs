@@ -1,9 +1,12 @@
+// PermanentUpgradeSystem.cs
 using UnityEngine;
 
 public class PermanentUpgradeSystem : MonoBehaviour
 {
     public int HealthCost = 15;
     public float HealthBonus = 15f;
+
+    float accumulatedBonus;
 
     public void BuyForPlayer()
     {
@@ -19,7 +22,13 @@ public class PermanentUpgradeSystem : MonoBehaviour
         if (!CurrencyWallet.Instance.Spend(HealthCost))
             return false;
 
-        playerHealth.Configure(playerHealth.MaxHealth + HealthBonus);
+        accumulatedBonus += HealthBonus;
+        PlayerStatController statController = playerHealth.GetComponent<PlayerStatController>();
+        if (statController != null)
+            statController.SetPermanentHealthBonus(accumulatedBonus);
+        else
+            playerHealth.SetMaxHealth(playerHealth.MaxHealth + HealthBonus, healDifference: true);
+
         SaveSystem.Instance?.AddPermanentHealth(HealthBonus);
         return true;
     }

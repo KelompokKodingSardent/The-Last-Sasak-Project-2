@@ -28,6 +28,23 @@ public class Health : MonoBehaviour, IDamageable
         ResetHealth();
     }
 
+    public void SetMaxHealth(float newMax, bool healDifference = true)
+    {
+        float clampedMax = Mathf.Max(1f, newMax);
+        float diff = clampedMax - maxHealth;
+        maxHealth = clampedMax;
+
+        if (!IsDead)
+        {
+            if (healDifference && diff > 0f)
+                currentHealth = Mathf.Min(maxHealth, currentHealth + diff);
+            else
+                currentHealth = Mathf.Clamp(currentHealth, 1f, maxHealth);
+        }
+
+        OnHealthChanged?.Invoke(currentHealth, maxHealth);
+    }
+
     public void ResetHealth()
     {
         IsDead = false;
@@ -59,7 +76,7 @@ public class Health : MonoBehaviour, IDamageable
 
     public void Heal(float amount)
     {
-        if (IsDead)
+        if (IsDead || amount <= 0f)
             return;
 
         currentHealth = Mathf.Min(maxHealth, currentHealth + amount);

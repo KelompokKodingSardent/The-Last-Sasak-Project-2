@@ -6,6 +6,7 @@ public class TimeEffectController : MonoBehaviour
     public static TimeEffectController Instance { get; private set; }
 
     bool playing;
+    float remainingRealtime;
     float pausedScale = 1f;
 
     void Awake()
@@ -26,17 +27,34 @@ public class TimeEffectController : MonoBehaviour
 
     public void Run(float duration)
     {
-        if (playing || Time.timeScale <= 0.01f)
+        if (duration <= 0f)
             return;
+
+        if (playing)
+        {
+            remainingRealtime = Mathf.Max(remainingRealtime, duration);
+            return;
+        }
+
+        if (Time.timeScale <= 0.01f)
+            return;
+
         StartCoroutine(Hitstop(duration));
     }
 
     IEnumerator Hitstop(float duration)
     {
         playing = true;
+        remainingRealtime = Mathf.Max(0.01f, duration);
         pausedScale = Time.timeScale;
-        Time.timeScale = 0.05f;
-        yield return new WaitForSecondsRealtime(Mathf.Max(0.01f, duration));
+        Time.timeScale = 0.04f;
+
+        while (remainingRealtime > 0f)
+        {
+            remainingRealtime -= Time.unscaledDeltaTime;
+            yield return null;
+        }
+
         Time.timeScale = pausedScale <= 0.01f ? 1f : pausedScale;
         playing = false;
     }

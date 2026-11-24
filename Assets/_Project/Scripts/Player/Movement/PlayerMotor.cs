@@ -9,9 +9,14 @@ public class PlayerMotor : MonoBehaviour
     CharacterController controller;
     PlayerInputReader input;
     PlayerFacingController facing;
+    PlayerActionController actions;
+    PlayerStatController stats;
+
     float velocityY;
     Vector3 dashVelocity;
     float dashTime;
+    Vector3 impulseVelocity;
+    float impulseTime;
 
     public bool IsGrounded => controller != null && controller.isGrounded;
     public Vector3 PlanarVelocity { get; private set; }
@@ -21,6 +26,9 @@ public class PlayerMotor : MonoBehaviour
         controller = GetComponent<CharacterController>();
         input = GetComponent<PlayerInputReader>();
         facing = GetComponent<PlayerFacingController>();
+        actions = GetComponent<PlayerActionController>();
+        stats = GetComponent<PlayerStatController>();
+
         if (Config == null)
             Config = PlayerMovementConfig.CreateRuntime();
         ApplyControllerSettings();
@@ -43,6 +51,13 @@ public class PlayerMotor : MonoBehaviour
         dashTime = duration;
     }
 
+    public void ApplyImpulse(Vector3 worldVelocity, float duration)
+    {
+        duration = Mathf.Max(0.02f, duration);
+        impulseVelocity = worldVelocity;
+        impulseTime = duration;
+    }
+
     void Update()
     {
         if (controller == null)
@@ -57,20 +72,33 @@ public class PlayerMotor : MonoBehaviour
             if (dashTime <= 0f)
                 dashVelocity = Vector3.zero;
         }
-        else if (CanMove && input != null && input.Move.sqrMagnitude > 0.01f)
-        {
-            Vector3 move = facing != null
-                ? facing.GetCameraRelativeMove(input.Move)
-                : new Vector3(input.Move.x, 0f, input.Move.y);
-
-            float speed = Config != null ? Config.MoveSpeed : 8f;
-            PlanarVelocity = move * speed;
-            motion += PlanarVelocity * Time.deltaTime;
-            TryAutoJump(move);
-        }
         else
         {
-            PlanarVelocity = Vector3.zero;
+            if (impulseTime > 0f)
+            {
+                motion += impulseVelocity * Time.deltaTime;
+                impulseTime -= Time.deltaTime;
+                if (impulseTime <= 0f)
+                    impulseVelocity = Vector3.zero;
+            }
+
+            if (CanMove && input != null && input.Move.sqrMagnitude > 0.01f)
+            {
+                Vector3 move = facing != null
+                    ? facing.GetCameraRelativeMove(input.Move)
+                    : new Vector3(input.Move.x, 0f, input.Move.y);
+
+                float baseSpeed = stats != null ? stats.FinalMoveSpeed : (Config != null ? Config.MoveSpeed : 8f);
+                float stateMultiplier = GetActionSpeedMultiplier();
+
+                PlanarVelocity = move * (baseSpeed * stateMultiplier);
+                motion += PlanarVelocity * Time.deltaTime;
+                TryAutoJump(move);
+            }
+            else
+            {
+                PlanarVelocity = Vector3.zero;
+            }
         }
 
         float gravity = Config != null ? Config.Gravity : -20f;
@@ -80,6 +108,22 @@ public class PlayerMotor : MonoBehaviour
         motion += Vector3.up * velocityY * Time.deltaTime;
 
         controller.Move(motion);
+    }
+
+    float GetActionSpeedMultiplier()
+    {
+        if (actions == null || Config == null)
+            return 1f;
+
+        switch (actions.State)
+        {
+            case PlayerActionState.Attacking:
+                return Config.AttackMoveSpeedMultiplier;
+            case PlayerActionState.Parrying:
+                return Config.ParryMoveSpeedMultiplier;
+            default:
+                return 1f;
+        }
     }
 
     void TryAutoJump(Vector3 moveDir)

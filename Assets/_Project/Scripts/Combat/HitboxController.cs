@@ -1,10 +1,11 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class HitboxController : MonoBehaviour
 {
-    readonly Collider[] hits = new Collider[16];
+    readonly Collider[] hits = new Collider[24];
     int lastAttackId = -1;
-    readonly System.Collections.Generic.HashSet<int> hitIds = new System.Collections.Generic.HashSet<int>();
+    readonly HashSet<int> hitIds = new HashSet<int>();
 
     public void BeginAttack(int attackId)
     {
@@ -22,12 +23,16 @@ public class HitboxController : MonoBehaviour
         if (col == null)
             return false;
 
-        int id = col.transform.root.GetInstanceID();
         if (attackId != lastAttackId)
         {
             lastAttackId = attackId;
             hitIds.Clear();
         }
+
+        Health targetHealth = col.GetComponentInParent<Health>();
+        int id = targetHealth != null
+            ? targetHealth.GetInstanceID()
+            : (col.attachedRigidbody != null ? col.attachedRigidbody.GetInstanceID() : col.gameObject.GetInstanceID());
 
         return hitIds.Add(id);
     }
