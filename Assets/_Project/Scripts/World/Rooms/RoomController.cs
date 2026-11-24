@@ -1,105 +1,236 @@
 using UnityEngine;
-using UnityEngine.AI;
+
+public enum RoomState
+{
+    Unvisited,
+    ActiveCombat,
+    Cleared,
+    RewardReady
+}
 
 public enum ArenaLayoutArchetype
 {
     Open,
     Pillar,
     Narrow,
-    Hazard
+    Arena
 }
 
 public class RoomController : MonoBehaviour
 {
-    public bool Cleared { get; private set; }
+    [Header("Room Identity & Layout")]
+    public RoomRole Role = RoomRole.Combat;
+    public ArenaLayoutArchetype LayoutArchetype = ArenaLayoutArchetype.Open;
+
+    [Header("Anchors & Encounter")]
     public Transform PlayerSpawn;
     public EnemySpawnPoint[] SpawnPoints;
-    public GameObject[] LockedExits;
-
-    [Header("Phase 5 — Arena Identity & Encounter")]
-    public ArenaLayoutArchetype LayoutType = ArenaLayoutArchetype.Open;
     public EncounterCompositionSO CuratedComposition;
     public RoomModifierSO ActiveRoomModifier;
-    public bool AutoRollRoomModifier = false;
-    public LayerMask PlayerLayerMask = 1 << 8;
 
-    private bool _encounterActive;
-    private float _hazardTimer;
-    private Transform _trackedPlayer;
+    [Header("Physical Traversal Trigger")]
+    [Tooltip("Otomatis membuat BoxCollider trigger di dalam batas RoomFootprint jika belum ada.")]
+    [SerializeField] private bool autoCreateEntryTrigger = true;
+    [Tooltip("Jarak masuk dari tepi pintu agar CombatGate tidak menjepit Player di ambang pintu.")]
+    [SerializeField] private float entryTriggerInset = 1.75f;
 
+    public RoomState State { get; private set; } = RoomState.Unvisited;
+    public bool Cleared => State == RoomState.Cleared || State == RoomState.RewardReady;
+    public int NodeId { get; private set; } = -1;
+    public bool IsMainPath { get; private set; } = true;
+    public RoomConnector[] Connectors { get; private set; }
+
+    private BoxCollider entryTrigger;
+    private bool initializedFromGraph;
+
+    private void Awake()
+    {
+        CacheComponents();
+        EnsureEntryTrigger();
+    }
+
+    private void CacheComponents()
+    {
+        Connectors = GetComponentsInChildren<RoomConnector>(true);
+
+        if (SpawnPoints == null || SpawnPoints.Length == 0)
+            SpawnPoints = GetComponentsInChildren<EnemySpawnPoint>(true);
+    }
+
+    /// <summary>
+    /// Dipanggil oleh RoomManager / WorldGenerationCoordinator setelah graph terpasang.
+    /// </summary>
+    public void InitializeFromGraph(RoomNodeData nodeData)
+    {
+        CacheComponents();
+        EnsureEntryTrigger();
+
+        if (nodeData == null)
+            return;
+
+        initializedFromGraph = true;
+        NodeId = nodeData.NodeId;
+        Role = nodeData.Role;
+        IsMainPath = nodeData.IsMainPath;
+
+        if (nodeData.AssignedRoomDef != null)
+            LayoutArchetype = nodeData.AssignedRoomDef.LayoutArchetype;
+
+        if (nodeData.AssignedEncounter != null)
+            CuratedComposition = nodeData.AssignedEncounter;
+
+        // Ruang Start langsung Cleared agar gerbang tidak terkunci saat spawn
+        if (Role == RoomRole.Start)
+        {
+            State = RoomState.Cleared;
+            SetAllCombatGatesLocked(false);
+        }
+        else
+        {
+            State = RoomState.Unvisited;
+            SetAllCombatGatesLocked(false);
+        }
+    }
+
+    private void EnsureEntryTrigger()
+    {
+        if (!autoCreateEntryTrigger || entryTrigger != null)
+            return;
+
+        // Cari trigger collider yang sudah ada di root jika desainer memasangnya manual
+        BoxCollider[] existingBoxes = GetComponents<BoxCollider>();
+        for (int i = 0; i < existingBoxes.Length; i++)
+        {
+            if (existingBoxes[i].isTrigger)
+            {
+                entryTrigger = existingBoxes[i];
+                return;
+            }
+        }
+
+        RoomFootprint footprint = GetComponent<RoomFootprint>();
+        if (footprint == null)
+            return;
+
+        float totalW = footprint.WidthCells * RoomFootprint.CellSize;
+        float totalD = footprint.DepthCells * RoomFootprint.CellSize;
+        float inset = Mathf.Min(entryTriggerInset, Mathf.Min(totalW, totalD) * 0.25f);
+
+        entryTrigger = gameObject.AddComponent<BoxCollider>();
+        entryTrigger.isTrigger = true;
+        entryTrigger.center = new Vector3(totalW * 0.5f, 2.0f, totalD * 0.5f);
+        entryTrigger.size = new Vector3(
+            Mathf.Max(2f, totalW - (inset * 2f)),
+            4.0f,
+            Mathf.Max(2f, totalD - (inset * 2f))
+        );
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other == null || !other.CompareTag("Player"))
+            return;
+
+        HandlePlayerEntered(other.transform);
+    }
+
+    public void HandlePlayerEntered(Transform playerTransform)
+    {
+        GameEvents.RaiseRoomEntered(this);
+
+        if (State != RoomState.Unvisited)
+            return;
+
+        if (ShouldTriggerCombatOnEnter())
+        {
+            State = RoomState.ActiveCombat;
+            SetAllCombatGatesLocked(true);
+
+            if (RoomManager.Instance != null)
+            {
+                RoomManager.Instance.NotifyCombatRoomEntered(this, playerTransform);
+            }
+            else
+            {
+                RoomEncounterController fallbackEncounter = FindFirstObjectByType<RoomEncounterController>();
+                if (fallbackEncounter != null)
+                {
+                    if (fallbackEncounter.Player == null)
+                        fallbackEncounter.Player = playerTransform;
+                    fallbackEncounter.StartEncounter(this);
+                }
+            }
+            return;
+        }
+
+        if (Role == RoomRole.Reward)
+        {
+            State = RoomState.RewardReady;
+            return;
+        }
+
+        State = RoomState.Cleared;
+    }
+
+    /// <summary>
+    /// Dipanggil oleh RoomEncounterController saat gelombang musuh dimulai.
+    /// </summary>
     public void BeginRoomEncounter(Transform player, int runDepth)
     {
-        Cleared = false;
-        _encounterActive = true;
-        _trackedPlayer = player;
-
-        if (ActiveRoomModifier == null && AutoRollRoomModifier && runDepth > 1)
-        {
-            RoomModifierType[] pool =
-            {
-                RoomModifierType.BloodlustArena,
-                RoomModifierType.SwiftSkirmish,
-                RoomModifierType.TacticalAmbush,
-                RoomModifierType.VolatileGround
-            };
-            ActiveRoomModifier = RoomModifierSO.CreateRuntime(pool[Random.Range(0, pool.Length)]);
-        }
-
-        if (ActiveRoomModifier != null && ActiveRoomModifier.SpawnPeriodicHazards)
-            _hazardTimer = ActiveRoomModifier.HazardInterval * 0.65f;
-    }
-
-    public void SetCleared(bool cleared)
-    {
-        Cleared = cleared;
-        if (cleared)
-            _encounterActive = false;
-
-        if (LockedExits == null)
-            return;
-        for (int i = 0; i < LockedExits.Length; i++)
-        {
-            if (LockedExits[i] != null)
-                LockedExits[i].SetActive(!cleared);
-        }
-    }
-
-    private void Update()
-    {
-        if (!_encounterActive || Cleared || ActiveRoomModifier == null || !ActiveRoomModifier.SpawnPeriodicHazards)
+        if (Cleared)
             return;
 
-        _hazardTimer -= Time.deltaTime;
-        if (_hazardTimer <= 0f)
+        State = RoomState.ActiveCombat;
+        SetAllCombatGatesLocked(true);
+    }
+
+    /// <summary>
+    /// Dipanggil saat seluruh musuh di ruangan ini dikalahkan.
+    /// </summary>
+    public void CompleteRoomEncounter()
+    {
+        if (Cleared)
+            return;
+
+        State = RoomState.Cleared;
+        SetAllCombatGatesLocked(false);
+    }
+
+    public void SetAllCombatGatesLocked(bool locked)
+    {
+        if (Connectors == null)
+            return;
+
+        for (int i = 0; i < Connectors.Length; i++)
         {
-            _hazardTimer = ActiveRoomModifier.HazardInterval;
-            SpawnEnvironmentalHazard();
+            RoomConnector conn = Connectors[i];
+            if (conn == null || !conn.IsConnected)
+                continue;
+
+            conn.SetCombatGateLocked(locked);
+
+            // Kunci juga CombatGate milik ruangan tetangga yang terhubung pada pintu ini
+            if (conn.ConnectedPartner != null)
+                conn.ConnectedPartner.SetCombatGateLocked(locked);
         }
     }
 
-    private void SpawnEnvironmentalHazard()
+    private bool ShouldTriggerCombatOnEnter()
     {
-        if (_trackedPlayer == null)
+        if (!initializedFromGraph)
         {
-            GameObject p = GameObject.FindGameObjectWithTag("Player");
-            if (p != null) _trackedPlayer = p.transform;
+            // Mode legacy / standalone scene: cek apakah ada encounter atau spawn point
+            return (CuratedComposition != null && CuratedComposition.Enemies.Count > 0) ||
+                   (SpawnPoints != null && SpawnPoints.Length > 0);
         }
 
-        Vector3 anchor = _trackedPlayer != null ? _trackedPlayer.position : transform.position;
-        Vector2 offset2D = Random.insideUnitCircle * 3.5f;
-        Vector3 candidate = anchor + new Vector3(offset2D.x, 0f, offset2D.y);
+        if (Role == RoomRole.Combat || Role == RoomRole.Elite)
+            return true;
 
-        if (NavMesh.SamplePosition(candidate, out NavMeshHit hit, 3.0f, NavMesh.AllAreas))
-            candidate = hit.position;
+        // Izinkan Exit room memiliki encounter penjaga jika di-assign CuratedComposition
+        if (Role == RoomRole.Exit && CuratedComposition != null && CuratedComposition.Enemies.Count > 0)
+            return true;
 
-        ArenaHazardZone.Create(
-            candidate,
-            ActiveRoomModifier.HazardRadius,
-            ActiveRoomModifier.HazardDamagePerTick,
-            ActiveRoomModifier.HazardDuration,
-            0.7f,
-            gameObject,
-            PlayerLayerMask
-        );
+        return false;
     }
 }

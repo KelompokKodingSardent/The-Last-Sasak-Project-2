@@ -1,142 +1,167 @@
-using System.Collections.Generic;
+using System;
 using UnityEngine;
 
 public class RoomManager : MonoBehaviour
 {
     public static RoomManager Instance { get; private set; }
 
-    public RoomController ActiveRoom { get; private set; }
-    public RoomGraph Graph;
-    public RoomController[] ExampleRooms;
-    public Transform Player;
-    public bool StartOnPlay = true;
+    [Header("Scene References (Auto-Resolved if Empty)")]
+    public WorldGenerationCoordinator WorldCoordinator;
+    public RoomEncounterController EncounterController;
 
-    [Header("Phase 5 — Run Progression & Roguelike Reward")]
-    [SerializeField] private int runDepth = 1;
-    public bool GrantRandomArtifactOnClear = true;
-    public List<GameplayArtifactSO> RunArtifactPool = new List<GameplayArtifactSO>();
+    [Header("Run Progression State")]
+    [Min(1)] [SerializeField] private int startingRunDepth = 1;
 
-    public int RunDepth => runDepth;
+    public int RunDepth { get; private set; } = 1;
+    public RoomController CurrentRoom { get; private set; }
+    public GeneratedMapData ActiveMap { get; private set; }
 
-    RoomEncounterController encounter;
-    int index;
+    public event Action<int> OnRunDepthChanged;
+    public event Action<RoomController> OnActiveRoomChanged;
 
-    void Awake()
+    private void Awake()
     {
-        Instance = this;
-        encounter = GetComponent<RoomEncounterController>();
-    }
-
-    void Start()
-    {
-        if (!StartOnPlay)
-            return;
-        if (Player == null)
+        if (Instance != null && Instance != this)
         {
-            GameObject player = GameObject.FindGameObjectWithTag("Player");
-            if (player != null)
-                Player = player.transform;
+            Destroy(gameObject);
+            return;
         }
 
-        runDepth = 1;
+        Instance = this;
+        RunDepth = Mathf.Max(1, startingRunDepth);
 
-        if (ExampleRooms != null && ExampleRooms.Length > 0)
-            Activate(ExampleRooms[0], Player);
+        if (WorldCoordinator == null)
+            WorldCoordinator = FindFirstObjectByType<WorldGenerationCoordinator>();
+
+        if (EncounterController == null)
+            EncounterController = FindFirstObjectByType<RoomEncounterController>();
     }
 
-    public void Activate(RoomController room, Transform player)
+    private void OnEnable()
     {
-        ActiveRoom = room;
-        if (Graph != null)
+        if (WorldCoordinator != null)
+            WorldCoordinator.OnWorldGenerated += HandleWorldGenerated;
+
+        GameEvents.OnRoomEntered += HandleRoomEntered;
+        GameEvents.OnRoomInstanceCleared += HandleRoomInstanceCleared;
+    }
+
+    private void Start()
+    {
+        // Tangkap map jika WorldGenerationCoordinator sudah selesai generate di Start() lebih dulu
+        if (WorldCoordinator != null && WorldCoordinator.CurrentMap != null && ActiveMap != WorldCoordinator.CurrentMap)
         {
-            for (int i = 0; i < Graph.Rooms.Count; i++)
+            HandleWorldGenerated(WorldCoordinator.CurrentMap);
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (WorldCoordinator != null)
+            WorldCoordinator.OnWorldGenerated -= HandleWorldGenerated;
+
+        GameEvents.OnRoomEntered -= HandleRoomEntered;
+        GameEvents.OnRoomInstanceCleared -= HandleRoomInstanceCleared;
+    }
+
+    private void HandleWorldGenerated(GeneratedMapData mapData)
+    {
+        ActiveMap = mapData;
+        if (mapData == null)
+            return;
+
+        for (int i = 0; i < mapData.RoomList.Count; i++)
+        {
+            AssembledRoomInstance assembled = mapData.RoomList[i];
+            if (assembled.Controller != null)
+                assembled.Controller.InitializeFromGraph(assembled.NodeData);
+        }
+
+        if (mapData.StartRoom != null && mapData.StartRoom.Controller != null)
+        {
+            CurrentRoom = mapData.StartRoom.Controller;
+            OnActiveRoomChanged?.Invoke(CurrentRoom);
+        }
+    }
+
+    private void HandleRoomEntered(RoomController room)
+    {
+        if (room == null)
+            return;
+
+        if (CurrentRoom != room)
+        {
+            CurrentRoom = room;
+            OnActiveRoomChanged?.Invoke(CurrentRoom);
+        }
+    }
+
+    public void NotifyCombatRoomEntered(RoomController room, Transform playerTransform)
+    {
+        if (room == null || EncounterController == null)
+            return;
+
+        if (EncounterController.Player == null && playerTransform != null)
+            EncounterController.Player = playerTransform;
+
+        EncounterController.StartEncounter(room);
+    }
+
+    private void HandleRoomInstanceCleared(RoomController clearedRoom)
+    {
+        RoomController targetRoom = clearedRoom != null ? clearedRoom : CurrentRoom;
+        if (targetRoom != null)
+            targetRoom.CompleteRoomEncounter();
+    }
+
+    public bool AreAllMainPathCombatRoomsCleared()
+    {
+        if (ActiveMap == null)
+            return true;
+
+        for (int i = 0; i < ActiveMap.RoomList.Count; i++)
+        {
+            AssembledRoomInstance room = ActiveMap.RoomList[i];
+            if (room.NodeData == null || !room.NodeData.IsMainPath)
+                continue;
+
+            if (room.NodeData.Role == RoomRole.Combat || room.NodeData.Role == RoomRole.Elite)
             {
-                if (Graph.Rooms[i].Controller == room)
-                    index = i;
+                if (room.Controller != null && !room.Controller.Cleared)
+                    return false;
             }
         }
 
-        if (encounter != null)
-        {
-            encounter.Player = player;
-            encounter.StartEncounter(room);
-        }
+        return true;
     }
 
-    public void Advance(Transform player)
+    public void AdvanceToNextDepth()
     {
-        if (player == null)
-            return;
+        RunDepth++;
+        OnRunDepthChanged?.Invoke(RunDepth);
 
-        runDepth++;
-
-        if (ExampleRooms != null && ExampleRooms.Length > 0)
+        if (WorldCoordinator != null)
         {
-            if (index + 1 >= ExampleRooms.Length)
-                return;
-            index++;
-            RoomController nextRoom = ExampleRooms[index];
-            if (nextRoom != null && nextRoom.PlayerSpawn != null)
-                player.position = nextRoom.PlayerSpawn.position + Vector3.up;
-            Activate(nextRoom, player);
-            return;
+            WorldCoordinator.GenerateWorld();
         }
-
-        if (Graph == null || index + 1 >= Graph.Rooms.Count)
-            return;
-
-        index++;
-        RoomPlacement next = Graph.Rooms[index];
-        if (next.Controller != null && next.Controller.PlayerSpawn != null)
-            player.position = next.Controller.PlayerSpawn.position + Vector3.up;
         else
-            player.position = next.WorldPosition + Vector3.up;
-
-        Activate(next.Controller, player);
+        {
+            Debug.Log($"[RoomManager] RunDepth meningkat ke {RunDepth} (mode non-prosedural).");
+        }
     }
 
-    void OnEnable()
+    public void ResetRun()
     {
-        GameEvents.OnRoomCleared += HandleCleared;
+        RunDepth = Mathf.Max(1, startingRunDepth);
+        OnRunDepthChanged?.Invoke(RunDepth);
+
+        if (WorldCoordinator != null)
+            WorldCoordinator.GenerateWorld();
     }
 
-    void OnDisable()
+    private void OnDestroy()
     {
-        GameEvents.OnRoomCleared -= HandleCleared;
         if (Instance == this)
             Instance = null;
-    }
-
-    void HandleCleared()
-    {
-        ActiveRoom?.SetCleared(true);
-
-        if (GrantRandomArtifactOnClear && Player != null)
-        {
-            ArtifactController artCtrl = Player.GetComponent<ArtifactController>();
-            if (artCtrl != null)
-            {
-                GameplayArtifactSO reward = PickArtifactReward();
-                if (reward != null)
-                    artCtrl.EquipGameplayArtifact(reward);
-            }
-        }
-    }
-
-    private GameplayArtifactSO PickArtifactReward()
-    {
-        if (RunArtifactPool != null && RunArtifactPool.Count > 0)
-            return RunArtifactPool[Random.Range(0, RunArtifactPool.Count)];
-
-        ArtifactPlaystyleType[] styles =
-        {
-            ArtifactPlaystyleType.AggressiveCombo,
-            ArtifactPlaystyleType.ParryCounter,
-            ArtifactPlaystyleType.DodgeMobility,
-            ArtifactPlaystyleType.StaggerBreaker,
-            ArtifactPlaystyleType.CriticalExecution,
-            ArtifactPlaystyleType.SoulRecovery
-        };
-        return GameplayArtifactSO.CreateRuntime(styles[Random.Range(0, styles.Length)]);
     }
 }

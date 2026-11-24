@@ -1,21 +1,22 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.Pool;
 
 public class ObjectPoolManager : MonoBehaviour
 {
     public static ObjectPoolManager Instance { get; private set; }
 
-    class PoolWrap
+    private class PoolWrap
     {
         public GameObject Prefab;
         public ObjectPool<GameObject> Pool;
     }
 
-    readonly Dictionary<GameObject, PoolWrap> pools = new Dictionary<GameObject, PoolWrap>();
-    readonly Dictionary<GameObject, PoolWrap> instanceToPool = new Dictionary<GameObject, PoolWrap>();
+    private readonly Dictionary<GameObject, PoolWrap> pools = new Dictionary<GameObject, PoolWrap>();
+    private readonly Dictionary<GameObject, PoolWrap> instanceToPool = new Dictionary<GameObject, PoolWrap>();
 
-    void Awake()
+    private void Awake()
     {
         if (Instance != null && Instance != this)
         {
@@ -40,6 +41,7 @@ public class ObjectPoolManager : MonoBehaviour
         GameObject instance = wrap.Pool.Get();
         instance.transform.SetPositionAndRotation(position, rotation);
         instance.SetActive(true);
+        SyncNavigationAndPhysics(instance, position);
         instanceToPool[instance] = wrap;
         return instance;
     }
@@ -58,7 +60,7 @@ public class ObjectPoolManager : MonoBehaviour
         instance.SetActive(false);
     }
 
-    PoolWrap CreatePool(GameObject prefab)
+    private PoolWrap CreatePool(GameObject prefab)
     {
         PoolWrap wrap = new PoolWrap { Prefab = prefab };
         wrap.Pool = new ObjectPool<GameObject>(
@@ -73,7 +75,11 @@ public class ObjectPoolManager : MonoBehaviour
                 ResetPooled(go);
                 go.SetActive(true);
             },
-            go => go.SetActive(false),
+            go =>
+            {
+                DisableNavigationBeforeRelease(go);
+                go.SetActive(false);
+            },
             go => Destroy(go),
             true,
             8,
@@ -81,21 +87,57 @@ public class ObjectPoolManager : MonoBehaviour
         return wrap;
     }
 
-    static void ResetPooled(GameObject go)
+    private static void ResetPooled(GameObject go)
     {
         Health health = go.GetComponent<Health>();
         health?.ResetHealth();
+
         InvulnerabilityHandler invuln = go.GetComponent<InvulnerabilityHandler>();
         invuln?.Clear();
+
         EnemyBrain brain = go.GetComponent<EnemyBrain>();
         brain?.ResetBrain();
+
         Projectile projectile = go.GetComponent<Projectile>();
         if (projectile != null)
             projectile.Owner = null;
+
         go.GetComponent<StaggerComponent>()?.ResetStagger();
     }
 
-    void OnDestroy()
+    private static void SyncNavigationAndPhysics(GameObject go, Vector3 targetPosition)
+    {
+        Rigidbody rb = go.GetComponent<Rigidbody>();
+        if (rb != null && !rb.isKinematic)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+
+        NavMeshAgent agent = go.GetComponent<NavMeshAgent>();
+        if (agent != null)
+        {
+            if (!agent.enabled)
+                agent.enabled = true;
+
+            agent.Warp(targetPosition);
+            if (agent.isOnNavMesh)
+                agent.ResetPath();
+        }
+    }
+
+    private static void DisableNavigationBeforeRelease(GameObject go)
+    {
+        NavMeshAgent agent = go.GetComponent<NavMeshAgent>();
+        if (agent != null && agent.enabled)
+        {
+            if (agent.isOnNavMesh)
+                agent.ResetPath();
+            agent.enabled = false;
+        }
+    }
+
+    private void OnDestroy()
     {
         if (Instance == this)
             Instance = null;
