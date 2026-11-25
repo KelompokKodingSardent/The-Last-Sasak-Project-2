@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79aa54debb5bd2b4e80080b3dfc4058b, type: 3}
   m_Name: Vanguard_DoubleSlash
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackPatternSO
-  patternName: Quick Slash
+  patternName: Double Slash
   selectionWeight: 30
   cooldown: 2.4
   minTriggerRange: 0.5
@@ -73,3 +73,8 @@ MonoBehaviour:
     empowerDamageMultiplier: 1.2
   repositionAfterAttack: 1
   repositionDistance: 1.6
+  minBossPhase: 1
+  maxBossPhase: 99
+  chainFollowUpPattern: {fileID: 0}
+  chainFollowUpChance: 0
+  chainRequiredPhase: 1

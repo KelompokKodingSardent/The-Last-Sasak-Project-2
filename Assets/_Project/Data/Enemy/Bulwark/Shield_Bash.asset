@@ -10,43 +10,43 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 79aa54debb5bd2b4e80080b3dfc4058b, type: 3}
-  m_Name: Ranger_Focused_Shot
+  m_Name: Shield_Bash
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackPatternSO
-  patternName: Quick Slash
-  selectionWeight: 55
-  cooldown: 1.2
+  patternName: Shield Bash
+  selectionWeight: 50
+  cooldown: 1.5
   minTriggerRange: 0.5
-  maxTriggerRange: 2.3
+  maxTriggerRange: 2.4
   canBeParried: 1
-  parryStaggerBonus: 30
-  baseDamage: 10
+  parryStaggerBonus: 50
+  baseDamage: 12
   swings:
-  - deliveryType: 1
-    telegraphDuration: 0.4
-    startupDuration: 0.1
-    executionDuration: 0.08
-    recoveryDuration: 0.45
-    telegraphShape: 2
-    range: 2.2
-    angle: 90
+  - deliveryType: 0
+    telegraphDuration: 0
+    startupDuration: 0
+    executionDuration: 0
+    recoveryDuration: 0
+    telegraphShape: 0
+    range: 0
+    angle: 0
     width: 0
     damageMultiplier: 0
     staggerDamage: 0
-    lungeDistance: 0.5
+    lungeDistance: 0
     lungeDuration: 0
     lockRotationOnStartup: 0
-    projectileCount: 1
-    projectileSpreadAngle: 18
-    zoneRadius: 2
+    projectileCount: 0
+    projectileSpreadAngle: 0
+    zoneRadius: 0
     zonePersistDuration: 0
-    zoneTickInterval: 0.65
-    trackPlayerDuringTelegraph: 1
+    zoneTickInterval: 0
+    trackPlayerDuringTelegraph: 0
     customHazardPrefab: {fileID: 0}
-    empowerRadius: 7.5
-    empowerDuration: 5
-    empowerSpeedMultiplier: 1.25
-    empowerDamageMultiplier: 1.2
-  repositionAfterAttack: 1
+    empowerRadius: 0
+    empowerDuration: 0
+    empowerSpeedMultiplier: 0
+    empowerDamageMultiplier: 0
+  repositionAfterAttack: 0
   repositionDistance: 1.8
   minBossPhase: 1
   maxBossPhase: 99

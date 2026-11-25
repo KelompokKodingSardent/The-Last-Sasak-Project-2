@@ -10,29 +10,21 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 79aa54debb5bd2b4e80080b3dfc4058b, type: 3}
-  m_Name: Vanguard_HeavySwing
+  m_Name: AttackPattern
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackPatternSO
   patternName: Quick Slash
-  selectionWeight: 15
-  cooldown: 4
-  minTriggerRange: 0.8
-  maxTriggerRange: 2.8
+  selectionWeight: 50
+  cooldown: 1.5
+  minTriggerRange: 0.5
+  maxTriggerRange: 2.4
   canBeParried: 1
-  parryStaggerBonus: 60
-  baseDamage: 20
-  swings:
-  - telegraphDuration: 0.75
-    startupDuration: 0.16
-    executionDuration: 0.12
-    recoveryDuration: 0.85
-    telegraphShape: 1
-    range: 2.7
-    angle: 150
-    width: 0
-    damageMultiplier: 0
-    staggerDamage: 0
-    lungeDistance: 1
-    lungeDuration: 0
-    lockRotationOnStartup: 0
+  parryStaggerBonus: 35
+  baseDamage: 12
+  swings: []
   repositionAfterAttack: 0
   repositionDistance: 1.8
+  minBossPhase: 1
+  maxBossPhase: 99
+  chainFollowUpPattern: {fileID: 0}
+  chainFollowUpChance: 0
+  chainRequiredPhase: 1

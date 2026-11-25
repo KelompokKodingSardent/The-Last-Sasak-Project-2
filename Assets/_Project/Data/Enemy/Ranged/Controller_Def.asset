@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: eb11c5288c282964d9073c2dfb0ef7ac, type: 3}
-  m_Name: Ranger_Def
+  m_Name: Controller_Def
   m_EditorClassIdentifier: Assembly-CSharp::EnemyDefinitionSO
   DisplayName: Enemy
-  Archetype: 1
+  Archetype: 7
   MaxHealth: 40
   MoveSpeed: 3.5
   DetectRange: 12
@@ -23,33 +23,35 @@ MonoBehaviour:
   ExpReward: 10
   SoulsReward: 2
   Attack: {fileID: 0}
-  IdealCombatDistance: 7.5
+  IdealCombatDistance: 8.5
   SpacingTolerance: 0.45
   StrafeSpeed: 2.2
   RepositionSpeed: 3.6
   RotationSpeed: 12
   StaggerPunishDuration: 2
   AttackDecisionDelay: {x: 0.25, y: 0.55}
-  PreferredZone: 0
+  PreferredZone: 3
   FlankAngle: 95
   AllowRearFlank: 0
   PlayerFacingAvoidAngle: 45
-  FlankRepositionChance: 0.65
+  FlankRepositionChance: 0.359
   CanSideDash: 0
   SideDashDistance: 2.2
   SideDashDuration: 0.18
   SideDashCooldown: 2.6
   SeparationRadius: 1.35
   SeparationStrength: 2.4
-  MinSafeDistance: 3.8
-  RequireLineOfSight: 1
+  MinSafeDistance: 0
+  RequireLineOfSight: 0
   ObstacleLayerMask:
     serializedVersion: 2
-    m_Bits: 512
+    m_Bits: 0
   BaseStaggerResistance: 0
   HasFrontalGuard: 0
   FrontalGuardAngle: 110
+  IsEliteOrBoss: 0
+  StaggerGrowthPerBreak: 0.2
+  BossStages: []
   AttackPatterns:
-  - {fileID: 11400000, guid: d2337b10a86879546afab15eb1c66e3c, type: 2}
-  - {fileID: 11400000, guid: 04371f99473dbb34d96e4505630fcef7, type: 2}
-  - {fileID: 11400000, guid: fde292ce6a5bb974084f9fba6e930a0e, type: 2}
+  - {fileID: 11400000, guid: e59f2440d20691442a2850e1dba65a01, type: 2}
+  - {fileID: 11400000, guid: 87f53675828ec694eb064d7e77807ac0, type: 2}

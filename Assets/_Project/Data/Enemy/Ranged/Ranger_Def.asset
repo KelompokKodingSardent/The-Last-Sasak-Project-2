@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eb11c5288c282964d9073c2dfb0ef7ac, type: 3}
+  m_Name: Ranger_Def
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyDefinitionSO
+  DisplayName: Enemy
+  Archetype: 1
+  MaxHealth: 40
+  MoveSpeed: 3.5
+  DetectRange: 12
+  AttackRange: 1.8
+  AttackDamage: 12
+  AttackCooldown: 1.2
+  ExpReward: 10
+  SoulsReward: 2
+  Attack: {fileID: 0}
+  IdealCombatDistance: 7.5
+  SpacingTolerance: 0.45
+  StrafeSpeed: 2.2
+  RepositionSpeed: 3.6
+  RotationSpeed: 12
+  StaggerPunishDuration: 2
+  AttackDecisionDelay: {x: 0.25, y: 0.55}
+  PreferredZone: 3
+  FlankAngle: 95
+  AllowRearFlank: 0
+  PlayerFacingAvoidAngle: 45
+  FlankRepositionChance: 0.65
+  CanSideDash: 0
+  SideDashDistance: 2.2
+  SideDashDuration: 0.18
+  SideDashCooldown: 2.6
+  SeparationRadius: 1.35
+  SeparationStrength: 2.4
+  MinSafeDistance: 3.8
+  RequireLineOfSight: 1
+  ObstacleLayerMask:
+    serializedVersion: 2
+    m_Bits: 512
+  BaseStaggerResistance: 0
+  HasFrontalGuard: 0
+  FrontalGuardAngle: 110
+  IsEliteOrBoss: 0
+  StaggerGrowthPerBreak: 0.2
+  BossStages: []
+  AttackPatterns:
+  - {fileID: 11400000, guid: 379c616b69ce23543a25676650370521, type: 2}
+  - {fileID: 11400000, guid: 238e49e152dc73540bace1c55030b481, type: 2}
+  - {fileID: 11400000, guid: 213c904049f9dab409e07eb649e6dd4d, type: 2}
+  - {fileID: 11400000, guid: e9699ef54dd908640b132c68660f1719, type: 2}

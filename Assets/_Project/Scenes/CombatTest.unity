@@ -366,6 +366,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 327b040bfbfa6f1489fb3c998cdc79b1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerInputReader
+  bufferDuration: 0.16
   Enabled: 1
 --- !u!114 &200010
 MonoBehaviour:
@@ -495,6 +496,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ParryController
   ActiveDuration: 0.2
   Recovery: 0.15
+  BaseParryStagger: 15
 --- !u!114 &200020
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -608,6 +610,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5e9022d68fb6e514085008c97efe9526, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EquipmentController
+  WeaponSlot1: {fileID: 0}
+  WeaponSlot2: {fileID: 0}
+  activeWeaponSlot: 0
+  EquippedArmor: {fileID: 0}
+  weaponSocket: {fileID: 0}
+  armorRenderer: {fileID: 0}
   Loadout: []
 --- !u!1 &200028
 GameObject:
@@ -1794,6 +1802,8 @@ MonoBehaviour:
   Speed: 10
   Damage: 8
   Life: 4
+  DeflectSpeedMultiplier: 1.45
+  DeflectDamageMultiplier: 1.5
   Owner: {fileID: 0}
   FromPlayer: 0
 --- !u!1 &200079
@@ -1849,18 +1859,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9afc8326dad83d74f994697e719d2049, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RoomController
+  Role: 2
+  LayoutArchetype: 0
   PlayerSpawn: {fileID: 200005}
   SpawnPoints:
   - {fileID: 200088}
   - {fileID: 200091}
-  LockedExits: []
-  LayoutType: 0
   CuratedComposition: {fileID: 0}
   ActiveRoomModifier: {fileID: 0}
-  AutoRollRoomModifier: 0
-  PlayerLayerMask:
-    serializedVersion: 2
-    m_Bits: 256
+  autoCreateEntryTrigger: 1
+  entryTriggerInset: 1.75
 --- !u!114 &200082
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1873,13 +1881,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 994bf1e5b28a0e9489f4be78e3c56f4a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RoomManager
-  ExampleRooms:
-  - {fileID: 200081}
-  Player: {fileID: 200005}
-  StartOnPlay: 1
-  runDepth: 1
-  GrantRandomArtifactOnClear: 1
-  RunArtifactPool: []
+  WorldCoordinator: {fileID: 0}
+  EncounterController: {fileID: 0}
+  startingRunDepth: 1
 --- !u!114 &200083
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1900,6 +1904,8 @@ MonoBehaviour:
   BossPrefab: {fileID: 0}
   Player: {fileID: 200005}
   SpawnFromPool: 0
+  navMeshSampleRadius: 2.5
+  minPlayerSpawnClearance: 3.5
 --- !u!114 &200084
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1970,6 +1976,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemySpawnPoint
   Archetype: 0
+  SpawnTags: []
+  ShowGizmos: 1
 --- !u!1 &200089
 GameObject:
   m_ObjectHideFlags: 0
@@ -2015,6 +2023,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemySpawnPoint
   Archetype: 1
+  SpawnTags: []
+  ShowGizmos: 1
 --- !u!1 &200092
 GameObject:
   m_ObjectHideFlags: 0
@@ -2215,7 +2225,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2f259280d50e5443ad9667167840f11, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyBrain
-  definition: {fileID: 11400000, guid: fd554461caf76ed4da50c1d5d66d8d9e, type: 2}
+  definition: {fileID: 11400000, guid: f2e5334d1e0b0b942ba5296d33d9b589, type: 2}
   initialModifiers: []
   currentState: 0
   currentStage: 1
@@ -2242,6 +2252,9 @@ GameObject:
   - component: {fileID: 200109}
   - component: {fileID: 200110}
   - component: {fileID: 200111}
+  - component: {fileID: 2085196484}
+  - component: {fileID: 2085196483}
+  - component: {fileID: 2085196482}
   m_Layer: 3
   m_Name: Example_Ranged
   m_TagString: Enemy
@@ -2261,7 +2274,8 @@ Transform:
   m_LocalPosition: {x: 4, y: 1, z: 7}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 188638856}
   m_Father: {fileID: 200080}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &200104
@@ -2421,7 +2435,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2f259280d50e5443ad9667167840f11, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyBrain
-  definition: {fileID: 0}
+  definition: {fileID: 11400000, guid: 646dcf79fe68eaf4b99c7ebd50262c18, type: 2}
   initialModifiers: []
   currentState: 0
   currentStage: 1
@@ -2450,6 +2464,7 @@ GameObject:
   - component: {fileID: 200121}
   - component: {fileID: 200122}
   - component: {fileID: 1840792090}
+  - component: {fileID: 1840792091}
   m_Layer: 3
   m_Name: Example_Elite
   m_TagString: Enemy
@@ -2630,7 +2645,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2f259280d50e5443ad9667167840f11, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyBrain
-  definition: {fileID: 0}
+  definition: {fileID: 11400000, guid: 2526c16fa20eacd40ba9738fa25c4f2a, type: 2}
   initialModifiers: []
   currentState: 0
   currentStage: 1
@@ -2639,7 +2654,7 @@ MonoBehaviour:
   currentSectorDebug: 0
   currentPatternDebug: 
   isEmpoweredDebug: 0
-  isGuardActiveDebug: 0
+  isGuardActiveDebug: 1
 --- !u!114 &200122
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4342,6 +4357,39 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!1 &188638855
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 188638856}
+  m_Layer: 3
+  m_Name: TelegraphRoot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &188638856
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 188638855}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -7, y: 0, z: -1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 2056496948}
+  - {fileID: 1176606891}
+  m_Father: {fileID: 200103}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &215189738
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4743,6 +4791,96 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
+--- !u!1 &1176606890
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1176606891}
+  - component: {fileID: 1176606893}
+  - component: {fileID: 1176606892}
+  m_Layer: 3
+  m_Name: FillProgress
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1176606891
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1176606890}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 188638856}
+  m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
+--- !u!23 &1176606892
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1176606890}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 9bafd215208de3742b765f189d1be16a, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!33 &1176606893
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1176606890}
+  m_Mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!114 &1199254833
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4979,6 +5117,28 @@ MonoBehaviour:
   heavyColor: {r: 1, g: 0.65, b: 0.05, a: 0.45}
   supportColor: {r: 0.25, g: 0.85, b: 1, a: 0.35}
   flashReadyColor: {r: 1, g: 1, b: 1, a: 0.75}
+--- !u!114 &1840792091
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 200112}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0ae5ae395e9543c4cbb2886ca81050aa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyVisualFeedback
+  targetRenderers:
+  - {fileID: 200095}
+  normalColor: {r: 1, g: 1, b: 1, a: 1}
+  telegraphTint: {r: 1, g: 0.72, b: 0.65, a: 1}
+  startupTint: {r: 1, g: 0.35, b: 0.25, a: 1}
+  staggeredColorA: {r: 1, g: 0.85, b: 0.15, a: 1}
+  staggeredColorB: {r: 1, g: 0.55, b: 0.05, a: 1}
+  deadColor: {r: 0.35, g: 0.35, b: 0.35, a: 1}
+  hitFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  hitFlashDuration: 0.08
 --- !u!1 &1983785842
 GameObject:
   m_ObjectHideFlags: 0
@@ -5161,6 +5321,154 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!1 &2056496947
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2056496948}
+  - component: {fileID: 2056496950}
+  - component: {fileID: 2056496949}
+  m_Layer: 3
+  m_Name: OuterBound
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2056496948
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2056496947}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 188638856}
+  m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
+--- !u!23 &2056496949
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2056496947}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 9b686a6eec497d54c8727418730de8b9, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!33 &2056496950
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2056496947}
+  m_Mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &2085196482
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 200102}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0ae5ae395e9543c4cbb2886ca81050aa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyVisualFeedback
+  targetRenderers:
+  - {fileID: 200095}
+  normalColor: {r: 1, g: 1, b: 1, a: 1}
+  telegraphTint: {r: 1, g: 0.72, b: 0.65, a: 1}
+  startupTint: {r: 1, g: 0.35, b: 0.25, a: 1}
+  staggeredColorA: {r: 1, g: 0.85, b: 0.15, a: 1}
+  staggeredColorB: {r: 1, g: 0.55, b: 0.05, a: 1}
+  deadColor: {r: 0.35, g: 0.35, b: 0.35, a: 1}
+  hitFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  hitFlashDuration: 0.08
+--- !u!114 &2085196483
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 200102}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6efc9029c48b93749ae9a24f6496f2c5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GroundTelegraphView
+  visualRoot: {fileID: 232762034}
+  outerBoundTransform: {fileID: 2056496948}
+  fillProgressTransform: {fileID: 1176606891}
+  fillRenderer: {fileID: 0}
+  parryableColor: {r: 1, g: 0.25, b: 0.15, a: 0.35}
+  heavyColor: {r: 1, g: 0.65, b: 0.05, a: 0.45}
+  supportColor: {r: 0.25, g: 0.85, b: 1, a: 0.35}
+  flashReadyColor: {r: 1, g: 1, b: 1, a: 0.75}
+--- !u!114 &2085196484
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 200102}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 37a0b838734527742a8b91143db19277, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StaggerComponent
+  MaxStagger: 100
+  Current: 0
+  StaggerResistance: 0
+  GuardStaggerMultiplier: 0.25
 --- !u!114 &2088428555
 MonoBehaviour:
   m_ObjectHideFlags: 0
