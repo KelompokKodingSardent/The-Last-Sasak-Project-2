@@ -49,6 +49,10 @@ MonoBehaviour:
   BaseStaggerResistance: 0
   HasFrontalGuard: 0
   FrontalGuardAngle: 110
+  IsEliteOrBoss: 0
+  StaggerGrowthPerBreak: 0.2
+  BossStages: []
   AttackPatterns:
   - {fileID: 11400000, guid: 04371f99473dbb34d96e4505630fcef7, type: 2}
+  - {fileID: 11400000, guid: d2337b10a86879546afab15eb1c66e3c, type: 2}
   - {fileID: 11400000, guid: fde292ce6a5bb974084f9fba6e930a0e, type: 2}

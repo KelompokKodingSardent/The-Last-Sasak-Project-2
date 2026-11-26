@@ -277,11 +277,13 @@ public class EnemyAttackController : MonoBehaviour, IParryable
         forward.Normalize();
 
         int count = Physics.OverlapSphereNonAlloc(origin, _activeStep.range, _hitBuffer, playerLayerMask);
+        Debug.Log($"Jumlah collider terdeteksi di sekitar musuh: {count}");
+
         for (int i = 0; i < count; i++)
         {
             Collider col = _hitBuffer[i];
             if (col == null) continue;
-
+            Debug.Log($"Collider kena: {col.gameObject.name}");
             GameObject targetObj = col.attachedRigidbody != null ? col.attachedRigidbody.gameObject : col.gameObject;
             if (_hitThisSwing.Contains(targetObj)) continue;
 

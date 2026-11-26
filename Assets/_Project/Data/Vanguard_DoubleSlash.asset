@@ -30,7 +30,7 @@ MonoBehaviour:
     range: 2.3
     angle: 100
     width: 0
-    damageMultiplier: 0
+    damageMultiplier: 1
     staggerDamage: 0
     lungeDistance: 0.6
     lungeDuration: 0
@@ -73,3 +73,8 @@ MonoBehaviour:
     empowerDamageMultiplier: 1.2
   repositionAfterAttack: 1
   repositionDistance: 1.6
+  minBossPhase: 1
+  maxBossPhase: 99
+  chainFollowUpPattern: {fileID: 0}
+  chainFollowUpChance: 0
+  chainRequiredPhase: 1
