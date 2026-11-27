@@ -18,7 +18,7 @@ namespace TheLastSasak.Items.Definitions
         public string ArtifactId => ItemId;
         public string PassiveDescription => string.IsNullOrWhiteSpace(passiveDescription) ? Description : passiveDescription;
         public Sprite ArtifactVisual => artifactVisual != null ? artifactVisual : Icon;
-        public IReadOnlyList<StatModifier> StatModifiers => statModifiers;
+        public override IReadOnlyList<StatModifier> StatModifiers => statModifiers;
 
         public IEnumerable<StatModifier> GetScopedModifiers()
         {

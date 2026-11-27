@@ -1,5 +1,5 @@
 using UnityEngine;
-
+using TheLastSasak.Player.Stats;
 [RequireComponent(typeof(CharacterController))]
 public class PlayerMotor : MonoBehaviour
 {

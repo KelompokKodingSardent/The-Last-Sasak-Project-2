@@ -1,5 +1,9 @@
 using System.Collections;
 using UnityEngine;
+using TheLastSasak.Items.Artifact;
+using TheLastSasak.Items.Definitions;
+using TheLastSasak.Items.Equipment;
+using TheLastSasak.Player.Stats;
 
 public class AttackController : MonoBehaviour
 {
@@ -88,9 +92,9 @@ public class AttackController : MonoBehaviour
     void RefreshComboChainSource()
     {
         if (equipment != null && equipment.ActiveWeapon != null &&
-            equipment.ActiveWeapon.ComboChain != null && equipment.ActiveWeapon.ComboChain.Length > 0)
+            equipment.ActiveWeapon.ComboChain != null && equipment.ActiveWeapon.ComboChain.Count > 0)
         {
-            activeChain = equipment.ActiveWeapon.ComboChain;
+            activeChain = System.Linq.Enumerable.ToArray(equipment.ActiveWeapon.ComboChain);
             return;
         }
 

@@ -1,128 +1,309 @@
 using System;
 using UnityEngine;
-
-public class EquipmentController : MonoBehaviour
+using TheLastSasak.Items.Definitions;
+using TheLastSasak.Player.Stats;
+namespace TheLastSasak.Items.Equipment
 {
-    [Header("Weapon Slots (Slot 1 & 2)")]
-    public WeaponDefinitionSO WeaponSlot1;
-    public WeaponDefinitionSO WeaponSlot2;
-    [SerializeField] int activeWeaponSlot = 0;
-
-    [Header("Armor Slot")]
-    public ArmorDefinitionSO EquippedArmor;
-
-    [Header("Visual Sockets")]
-    [SerializeField] Transform weaponSocket;
-    [SerializeField] Renderer armorRenderer;
-
-    [Header("Legacy Fallback")]
-    public AttackDefinitionSO[] Loadout;
-
-    public WeaponDefinitionSO ActiveWeapon => activeWeaponSlot == 0 ? WeaponSlot1 : WeaponSlot2;
-    public int ActiveWeaponSlot => activeWeaponSlot;
-
-    public event Action<WeaponDefinitionSO> OnWeaponEquipped;
-    public event Action<ArmorDefinitionSO> OnArmorEquipped;
-
-    ItemSwitching switching;
-    PlayerStatController statController;
-    Animator animator;
-    RuntimeAnimatorController defaultAnimatorController;
-    GameObject spawnedWeaponVisual;
-
-    void Awake()
+    public class EquipmentController : MonoBehaviour
     {
-        switching = GetComponent<ItemSwitching>();
-        statController = GetComponent<PlayerStatController>();
-        animator = GetComponentInChildren<Animator>();
-        if (animator != null)
-            defaultAnimatorController = animator.runtimeAnimatorController;
-    }
+        [Header("Initial Loadout (Optional)")]
+        [SerializeField] private WeaponDefinitionSO initialWeaponSlot1;
+        [SerializeField] private WeaponDefinitionSO initialWeaponSlot2;
+        [SerializeField] private ArmorDefinitionSO initialArmor;
 
-    void Start()
-    {
-        ApplyActiveWeaponVisualsAndCombo();
-        ApplyArmorVisuals();
-    }
+        [Header("Scene-Authored Weapon Visuals")]
+        [SerializeField] private GameObject weaponSlot1Visual;
+        [SerializeField] private GameObject weaponSlot2Visual;
 
-    public bool SwitchWeaponSlot(int slotIndex)
-    {
-        if (slotIndex < 0 || slotIndex > 1 || slotIndex == activeWeaponSlot)
-            return false;
+        [Header("Armor Visual")]
+        [SerializeField] private Renderer armorRenderer;
 
-        WeaponDefinitionSO target = slotIndex == 0 ? WeaponSlot1 : WeaponSlot2;
-        if (target == null)
-            return false;
+        [Header("Legacy Fallback")]
+        [SerializeField] private AttackDefinitionSO[] loadout;
 
-        activeWeaponSlot = slotIndex;
-        ApplyActiveWeaponVisualsAndCombo();
-        statController?.RecalculateStats(resetHealthToFull: false);
-        OnWeaponEquipped?.Invoke(target);
-        return true;
-    }
+        private readonly PlayerEquipmentState state = new PlayerEquipmentState();
 
-    public void EquipWeapon(WeaponDefinitionSO weapon, int slotIndex = -1)
-    {
-        int targetSlot = slotIndex < 0 ? activeWeaponSlot : Mathf.Clamp(slotIndex, 0, 1);
-        if (targetSlot == 0) WeaponSlot1 = weapon;
-        else WeaponSlot2 = weapon;
+        private PlayerStatController statController;
+        private PlayerActionController actionController;
+        private Animator animator;
+        private RuntimeAnimatorController defaultAnimatorController;
+        private Material defaultArmorMaterial;
 
-        if (targetSlot == activeWeaponSlot)
+        public PlayerEquipmentState State => state;
+        public WeaponDefinitionSO WeaponSlot1 => state.WeaponSlot1;
+        public WeaponDefinitionSO WeaponSlot2 => state.WeaponSlot2;
+        public WeaponDefinitionSO ActiveWeapon => state.GetActiveWeapon();
+        public WeaponSlotType ActiveWeaponSlot => state.ActiveWeaponSlot;
+        public ArmorDefinitionSO EquippedArmor => state.EquippedArmor;
+        public AttackDefinitionSO[] Loadout => loadout;
+
+        public event Action<WeaponSlotType, WeaponDefinitionSO> OnWeaponEquipped;
+        public event Action<WeaponSlotType, WeaponDefinitionSO> OnWeaponUnequipped;
+        public event Action<WeaponSlotType, WeaponDefinitionSO> OnWeaponSwitched;
+        public event Action<ArmorDefinitionSO> OnArmorEquipped;
+        public event Action<ArmorDefinitionSO> OnArmorUnequipped;
+        public event Action OnEquipmentChanged;
+
+        private void Awake()
         {
-            ApplyActiveWeaponVisualsAndCombo();
-            statController?.RecalculateStats(resetHealthToFull: false);
-            OnWeaponEquipped?.Invoke(weapon);
+            statController = GetComponent<PlayerStatController>();
+            actionController = GetComponent<PlayerActionController>();
+            animator = GetComponentInChildren<Animator>();
+
+            if (animator != null)
+                defaultAnimatorController = animator.runtimeAnimatorController;
+
+            if (armorRenderer != null)
+                defaultArmorMaterial = armorRenderer.sharedMaterial;
         }
-    }
 
-    public void EquipArmor(ArmorDefinitionSO armor)
-    {
-        EquippedArmor = armor;
-        ApplyArmorVisuals();
-        statController?.RecalculateStats(resetHealthToFull: false);
-        OnArmorEquipped?.Invoke(armor);
-    }
-
-    public void SetLoadout(AttackDefinitionSO[] attacks)
-    {
-        Loadout = attacks;
-        if (switching != null)
-            switching.Attacks = attacks;
-    }
-
-    void ApplyActiveWeaponVisualsAndCombo()
-    {
-        WeaponDefinitionSO weapon = ActiveWeapon;
-
-        if (spawnedWeaponVisual != null)
-            Destroy(spawnedWeaponVisual);
-
-        if (weapon != null)
+        private void Start()
         {
-            if (weapon.WeaponPrefab != null && weaponSocket != null)
+            if (state.WeaponSlot1 == null && initialWeaponSlot1 != null)
+                state.SetWeapon(WeaponSlotType.Slot1, initialWeaponSlot1);
+
+            if (state.WeaponSlot2 == null && initialWeaponSlot2 != null)
+                state.SetWeapon(WeaponSlotType.Slot2, initialWeaponSlot2);
+
+            if (state.ActiveWeaponSlot == WeaponSlotType.None)
             {
-                spawnedWeaponVisual = Instantiate(weapon.WeaponPrefab, weaponSocket);
-                spawnedWeaponVisual.transform.localPosition = Vector3.zero;
-                spawnedWeaponVisual.transform.localRotation = Quaternion.identity;
+                if (state.WeaponSlot1 != null)
+                    state.SetActiveWeaponSlot(WeaponSlotType.Slot1);
+                else if (state.WeaponSlot2 != null)
+                    state.SetActiveWeaponSlot(WeaponSlotType.Slot2);
             }
+
+            if (state.EquippedArmor == null && initialArmor != null)
+                state.SetArmor(initialArmor);
+
+            RefreshPresentationAndStats();
+        }
+
+        public bool TryEquipWeapon(WeaponSlotType slot, WeaponDefinitionSO weapon)
+        {
+            if (weapon == null || (slot != WeaponSlotType.Slot1 && slot != WeaponSlotType.Slot2))
+                return false;
+
+            if (!CanModifyEquipment())
+                return false;
+
+            state.SetWeapon(slot, weapon);
+            OnWeaponEquipped?.Invoke(slot, weapon);
+
+            if (state.ActiveWeaponSlot == WeaponSlotType.None)
+            {
+                state.SetActiveWeaponSlot(slot);
+                OnWeaponSwitched?.Invoke(slot, weapon);
+            }
+
+            RefreshPresentationAndStats();
+            OnEquipmentChanged?.Invoke();
+            return true;
+        }
+
+        public bool TryUnequipWeapon(WeaponSlotType slot)
+        {
+            if (!CanModifyEquipment())
+                return false;
+
+            ForceUnequipWeapon(slot);
+            return true;
+        }
+
+        public void ForceUnequipWeapon(WeaponSlotType slot)
+        {
+            if (slot != WeaponSlotType.Slot1 && slot != WeaponSlotType.Slot2)
+                return;
+
+            WeaponDefinitionSO currentWeapon = state.GetWeapon(slot);
+            if (currentWeapon == null)
+                return;
+
+            state.SetWeapon(slot, null);
+            OnWeaponUnequipped?.Invoke(slot, currentWeapon);
+
+            if (state.ActiveWeaponSlot == slot)
+            {
+                WeaponSlotType fallbackSlot = slot == WeaponSlotType.Slot1
+                    ? WeaponSlotType.Slot2
+                    : WeaponSlotType.Slot1;
+
+                WeaponSlotType nextActive = state.GetWeapon(fallbackSlot) != null
+                    ? fallbackSlot
+                    : WeaponSlotType.None;
+
+                state.SetActiveWeaponSlot(nextActive);
+                OnWeaponSwitched?.Invoke(state.ActiveWeaponSlot, state.GetActiveWeapon());
+            }
+
+            RefreshPresentationAndStats();
+            OnEquipmentChanged?.Invoke();
+        }
+
+        public bool TrySwitchWeaponSlot(WeaponSlotType targetSlot)
+        {
+            if (targetSlot != WeaponSlotType.Slot1 && targetSlot != WeaponSlotType.Slot2)
+                return false;
+
+            if (state.ActiveWeaponSlot == targetSlot)
+                return false;
+
+            if (state.GetWeapon(targetSlot) == null)
+                return false;
+
+            if (!CanModifyEquipment())
+                return false;
+
+            state.SetActiveWeaponSlot(targetSlot);
+            RefreshPresentationAndStats();
+            OnWeaponSwitched?.Invoke(targetSlot, state.GetActiveWeapon());
+            OnEquipmentChanged?.Invoke();
+            return true;
+        }
+
+        public bool TrySwitchWeaponSlot(int zeroBasedSlotIndex)
+        {
+            WeaponSlotType targetSlot = zeroBasedSlotIndex switch
+            {
+                0 => WeaponSlotType.Slot1,
+                1 => WeaponSlotType.Slot2,
+                _ => WeaponSlotType.None
+            };
+            return TrySwitchWeaponSlot(targetSlot);
+        }
+
+        public bool TryToggleWeaponSlot()
+        {
+            WeaponSlotType nextSlot = state.ActiveWeaponSlot == WeaponSlotType.Slot1
+                ? WeaponSlotType.Slot2
+                : WeaponSlotType.Slot1;
+
+            return TrySwitchWeaponSlot(nextSlot);
+        }
+
+        public bool TryEquipArmor(ArmorDefinitionSO armor)
+        {
+            if (armor == null || !CanModifyEquipment())
+                return false;
+
+            state.SetArmor(armor);
+            RefreshPresentationAndStats();
+            OnArmorEquipped?.Invoke(armor);
+            OnEquipmentChanged?.Invoke();
+            return true;
+        }
+
+        public bool TryUnequipArmor()
+        {
+            if (!CanModifyEquipment())
+                return false;
+
+            ForceUnequipArmor();
+            return true;
+        }
+
+        public void ForceUnequipArmor()
+        {
+            ArmorDefinitionSO previousArmor = state.EquippedArmor;
+            if (previousArmor == null)
+                return;
+
+            state.SetArmor(null);
+            RefreshPresentationAndStats();
+            OnArmorUnequipped?.Invoke(previousArmor);
+            OnEquipmentChanged?.Invoke();
+        }
+
+        public void RestoreEquipmentState(
+            WeaponDefinitionSO slot1,
+            WeaponDefinitionSO slot2,
+            WeaponSlotType activeSlot,
+            ArmorDefinitionSO armor)
+        {
+            state.Clear();
+
+            if (slot1 != null)
+            {
+                state.SetWeapon(WeaponSlotType.Slot1, slot1);
+                OnWeaponEquipped?.Invoke(WeaponSlotType.Slot1, slot1);
+            }
+
+            if (slot2 != null && slot2 != slot1)
+            {
+                state.SetWeapon(WeaponSlotType.Slot2, slot2);
+                OnWeaponEquipped?.Invoke(WeaponSlotType.Slot2, slot2);
+            }
+
+            if (armor != null)
+            {
+                state.SetArmor(armor);
+                OnArmorEquipped?.Invoke(armor);
+            }
+
+            if (state.GetWeapon(activeSlot) != null)
+                state.SetActiveWeaponSlot(activeSlot);
+            else if (state.WeaponSlot1 != null)
+                state.SetActiveWeaponSlot(WeaponSlotType.Slot1);
+            else if (state.WeaponSlot2 != null)
+                state.SetActiveWeaponSlot(WeaponSlotType.Slot2);
+            else
+                state.SetActiveWeaponSlot(WeaponSlotType.None);
+
+            RefreshPresentationAndStats();
+            OnWeaponSwitched?.Invoke(state.ActiveWeaponSlot, state.GetActiveWeapon());
+            OnEquipmentChanged?.Invoke();
+        }
+
+        private bool CanModifyEquipment()
+        {
+            return actionController == null || actionController.CanSwitchWeapon();
+        }
+
+        private void RefreshPresentationAndStats()
+        {
+            ApplyWeaponPresentation();
+            ApplyArmorPresentation();
+            statController?.RecalculateStats();
+        }
+
+        private void ApplyWeaponPresentation()
+        {
+            if (weaponSlot1Visual != null)
+                weaponSlot1Visual.SetActive(state.ActiveWeaponSlot == WeaponSlotType.Slot1 && state.WeaponSlot1 != null);
+
+            if (weaponSlot2Visual != null)
+                weaponSlot2Visual.SetActive(state.ActiveWeaponSlot == WeaponSlotType.Slot2 && state.WeaponSlot2 != null);
+
+            WeaponDefinitionSO active = state.GetActiveWeapon();
 
             if (animator != null)
             {
-                animator.runtimeAnimatorController = weapon.AnimatorOverride != null
-                    ? weapon.AnimatorOverride
+                animator.runtimeAnimatorController = (active != null && active.AnimatorOverride != null)
+                    ? active.AnimatorOverride
                     : defaultAnimatorController;
             }
 
-            if (weapon.ComboChain != null && weapon.ComboChain.Length > 0)
+            if (active != null && active.ComboChain != null && active.ComboChain.Count > 0)
             {
-                SetLoadout(weapon.ComboChain);
+                loadout = System.Linq.Enumerable.ToArray(active.ComboChain);
             }
         }
-    }
 
-    void ApplyArmorVisuals()
-    {
-        if (EquippedArmor != null && armorRenderer != null && EquippedArmor.ArmorMaterial != null)
-            armorRenderer.sharedMaterial = EquippedArmor.ArmorMaterial;
+        private void ApplyArmorPresentation()
+        {
+            if (armorRenderer == null)
+                return;
+
+            if (state.EquippedArmor != null && state.EquippedArmor.ArmorMaterial != null)
+                armorRenderer.sharedMaterial = state.EquippedArmor.ArmorMaterial;
+            else if (defaultArmorMaterial != null)
+                armorRenderer.sharedMaterial = defaultArmorMaterial;
+        }
+        private IItemOwnershipQuery ownershipQuery;
+
+public void SetOwnershipQuery(IItemOwnershipQuery query)
+{
+    ownershipQuery = query;
+}
     }
 }

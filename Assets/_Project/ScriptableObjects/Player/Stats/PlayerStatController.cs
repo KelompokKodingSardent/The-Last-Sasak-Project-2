@@ -52,6 +52,20 @@ namespace TheLastSasak.Player.Stats
         public float FinalMoveSpeed => GetStat(StatType.MoveSpeed);
         public float FinalStaminaRegen => GetStat(StatType.StaminaRegen);
 
+        // Properti kompatibilitas untuk sistem Combat & Movement lama
+        public float FinalAttackMultiplier
+        {
+            get
+            {
+                float baseAtk = GetBaseStat(StatType.AttackDamage);
+                return baseAtk > 0f ? FinalAttackDamage / baseAtk : 1f;
+            }
+        }
+        public float FinalFlatAttackBonus => Mathf.Max(0f, FinalAttackDamage - GetBaseStat(StatType.AttackDamage));
+        public float FinalStaggerMultiplier => 1f;
+        public float FinalDodgeRecoveryMultiplier => 1f;
+        public float FinalParryWindowBonus => 0f;
+
         private void Awake()
         {
             if (equipmentController == null)
@@ -159,9 +173,6 @@ namespace TheLastSasak.Player.Stats
             OnStatsRecalculated?.Invoke();
         }
 
-        /// <summary>
-        /// Mengumpulkan modifier sesuai urutan arsitektur Bagian III Point 8.2.
-        /// </summary>
         private void CollectAllActiveModifiers(List<IStatModifier> targetList)
         {
             targetList.Clear();
@@ -172,7 +183,7 @@ namespace TheLastSasak.Player.Stats
             // 2. In-Run Progression
             targetList.AddRange(_inRunProgression);
 
-            // 3. Active Weapon Modifiers (hanya senjata yang sedang aktif di tangan)
+            // 3. Active Weapon Modifiers
             if (equipmentController != null && equipmentController.ActiveWeapon != null)
             {
                 foreach (StatModifier mod in equipmentController.ActiveWeapon.GetScopedModifiers())
@@ -213,7 +224,37 @@ namespace TheLastSasak.Player.Stats
             return _finalStats.TryGetValue(statType, out float value) ? value : GetBaseStat(statType);
         }
 
-        // API untuk Permanent Upgrades, In-Run Progression & Temporary Effects
+        // Adapter kompatibilitas untuk PlayerProgression & PermanentUpgradeSystem
+        public void SetPermanentHealthBonus(float bonus)
+        {
+            _permanentUpgrades.RemoveAll(m => m.SourceId == "permanent_health_bonus");
+            if (bonus > 0f)
+            {
+                _permanentUpgrades.Add(new StatModifier(StatType.MaxHealth, ModifierOperation.Additive, bonus, "permanent_health_bonus"));
+            }
+            RecalculateStats(notifyHealthReceiver: true);
+        }
+
+        public void SetRunLevelHealthBonus(float bonus)
+        {
+            _inRunProgression.RemoveAll(m => m.SourceId == "run_level_health_bonus");
+            if (bonus > 0f)
+            {
+                _inRunProgression.Add(new StatModifier(StatType.MaxHealth, ModifierOperation.Additive, bonus, "run_level_health_bonus"));
+            }
+            RecalculateStats(notifyHealthReceiver: true);
+        }
+
+        public float ComputeOutgoingDamage(float rawAttackDamage)
+        {
+            return Mathf.Max(0f, rawAttackDamage * FinalAttackMultiplier);
+        }
+
+        public float ComputeIncomingDamage(float rawIncomingDamage)
+        {
+            return Mathf.Max(0f, rawIncomingDamage * (1f - Mathf.Clamp01(FinalDamageReduction)));
+        }
+
         public void SetPermanentUpgrades(IEnumerable<IStatModifier> modifiers)
         {
             _permanentUpgrades.Clear();
@@ -246,9 +287,6 @@ namespace TheLastSasak.Player.Stats
             }
         }
 
-        /// <summary>
-        /// Menghitung pratinjau statistik untuk UI perbandingan (Phase 8) tanpa mengubah state aktif.
-        /// </summary>
         public Dictionary<StatType, float> PreviewStatsWithCandidate(EquipmentDefinitionSO candidate)
         {
             WeaponDefinitionSO previewWeapon = equipmentController != null ? equipmentController.ActiveWeapon : null;
@@ -282,7 +320,7 @@ namespace TheLastSasak.Player.Stats
                     previewBuffer.Add(mod);
                 }
             }
-            // Tambahkan di PlayerStatController.PreviewStatsWithCandidate() sebelum mengumpulkan artifact modifiers:
+
             List<ArtifactDefinitionSO> previewArtifacts = new List<ArtifactDefinitionSO>();
             if (artifactController != null)
             {
@@ -299,13 +337,6 @@ namespace TheLastSasak.Player.Stats
             for (int i = 0; i < previewArtifacts.Count; i++)
             {
                 foreach (StatModifier mod in previewArtifacts[i].GetScopedModifiers())
-                {
-                    previewBuffer.Add(mod);
-                }
-            }
-            if (artifactController != null)
-            {
-                foreach (StatModifier mod in artifactController.GetArtifactModifiers())
                 {
                     previewBuffer.Add(mod);
                 }

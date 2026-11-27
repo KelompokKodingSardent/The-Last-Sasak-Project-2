@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
-
+using TheLastSasak.Items.Artifact;
+using TheLastSasak.Player.Stats;
 public class DodgeController : MonoBehaviour
 {
     PlayerMovementConfig config;

@@ -1,5 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TheLastSasak.Items.Inventory;
+using TheLastSasak.UI.Inventory;
 
 public class HUDController : MonoBehaviour
 {

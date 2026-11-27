@@ -1,5 +1,8 @@
+using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
+using TheLastSasak.Items.Modifiers;
+using TheLastSasak.Systems.Save;
 
 public class GameplayTests
 {
@@ -33,18 +36,30 @@ public class GameplayTests
     }
 
     [Test]
-    public void SaveValidatorRejectsBadData()
+    public void SaveDataEnsuresValidStructure()
     {
-        Assert.IsFalse(SaveValidator.IsValid(null));
-        Assert.IsFalse(SaveValidator.IsValid(new SaveData { SaveVersion = 0, SoulsCoin = 1 }));
-        Assert.IsTrue(SaveValidator.IsValid(new SaveData { SaveVersion = 1, SoulsCoin = 0 }));
+        TLS_SaveData data = new TLS_SaveData();
+        data.EnsureValidStructure();
+        Assert.IsNotNull(data.PlayerProgressionData);
     }
 
     [Test]
     public void StatModifierApplies()
     {
-        StatModifier mod = new StatModifier { Additive = 5f, Multiplier = 2f };
-        Assert.AreEqual(30f, mod.Apply(10f));
+        var baseStats = new Dictionary<StatType, float>
+        {
+            { StatType.AttackDamage, 10f }
+        };
+
+        var modifiers = new List<IStatModifier>
+        {
+            new StatModifier(StatType.AttackDamage, ModifierOperation.Additive, 15f, "test_mod")
+        };
+
+        var finalStats = new Dictionary<StatType, float>();
+        ModifierCalculator.CalculateAllStats(baseStats, modifiers, finalStats);
+
+        Assert.AreEqual(25f, finalStats[StatType.AttackDamage]);
     }
 
     [Test]

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
-
+using TheLastSasak.Player.Stats;
 public class PlayerAnimationController : MonoBehaviour
 {
     Animator animator;

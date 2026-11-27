@@ -35,9 +35,9 @@ public class PlayerInteract : MonoBehaviour
     {
         if (other == null || !other.CompareTag("Collectible"))
             return;
+
         CurrencyWallet.Instance?.Add(2);
         ExperienceSystem.Instance?.Add(10);
-        GetComponent<Inventory>()?.Add(new InventoryItem { Id = "loot", DisplayName = "Loot", Souls = 2, Exp = 10 });
         other.gameObject.SetActive(false);
     }
 }

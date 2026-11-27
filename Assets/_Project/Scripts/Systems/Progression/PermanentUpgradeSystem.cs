@@ -1,5 +1,7 @@
 // PermanentUpgradeSystem.cs
 using UnityEngine;
+using TheLastSasak.Systems.Save;
+using TheLastSasak.Player.Stats;
 
 public class PermanentUpgradeSystem : MonoBehaviour
 {

@@ -1,4 +1,5 @@
 using UnityEngine;
+using TheLastSasak.Systems.Save;
 
 public class CurrencyWallet : MonoBehaviour
 {

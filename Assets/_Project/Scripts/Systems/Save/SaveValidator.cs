@@ -1,9 +1,15 @@
-public static class SaveValidator
+namespace TheLastSasak.Systems.Save
 {
-    public const int CurrentVersion = 1;
-
-    public static bool IsValid(SaveData data)
+    public static class SaveValidator
     {
-        return data != null && data.SaveVersion > 0 && data.SoulsCoin >= 0;
+        public const int CurrentVersion = 1;
+
+        public static bool IsValid(TLS_SaveData data)
+        {
+            return data != null
+                && data.SaveVersion > 0
+                && data.CurrencyData != null
+                && data.CurrencyData.Souls >= 0;
+        }
     }
 }

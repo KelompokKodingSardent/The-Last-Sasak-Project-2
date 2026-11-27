@@ -1,8 +1,14 @@
+using System.Collections.Generic;
 using UnityEngine;
+using TheLastSasak.Items.Modifiers;
 
-[CreateAssetMenu(menuName = "TLS/Items/Equipment Definition")]
-public class EquipmentDefinitionSO : ScriptableObject
+namespace TheLastSasak.Items.Definitions
 {
-    public string Id = "weapon";
-    public AttackDefinitionSO Attack;
+    public abstract class EquipmentDefinitionSO : ItemDefinitionSO
+    {
+        [Header("Stat Modifiers")]
+        [SerializeField] private List<StatModifier> statModifiers = new List<StatModifier>();
+
+        public virtual IReadOnlyList<StatModifier> StatModifiers => statModifiers;
+    }
 }

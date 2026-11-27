@@ -23,7 +23,7 @@ namespace TheLastSasak.Items.Definitions
         public Material ArmorMaterial => armorMaterial;
         public string ArmorVisualId => armorVisualId;
         public string ArmorDescription => string.IsNullOrWhiteSpace(armorDescription) ? Description : armorDescription;
-        public IReadOnlyList<StatModifier> StatModifiers => statModifiers;
+        public override IReadOnlyList<StatModifier> StatModifiers => statModifiers;
 
         public IEnumerable<StatModifier> GetScopedModifiers()
         {

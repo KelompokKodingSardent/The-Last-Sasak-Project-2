@@ -207,5 +207,14 @@ namespace TheLastSasak.UI.Inventory
 
             return false;
         }
+public void Bind(PlayerInventory targetInventory)
+{
+    if (inventory == targetInventory) return;
+    if (isActiveAndEnabled && inventory != null) inventory.OnInventoryChanged -= RefreshGrid;
+    inventory = targetInventory;
+    if (isActiveAndEnabled && inventory != null) inventory.OnInventoryChanged += RefreshGrid;
+    RefreshGrid();
+}
+
     }
 }

@@ -33,6 +33,7 @@ namespace TheLastSasak.Systems.Save
 
         private void Awake()
         {
+            if (Instance == null) Instance = this;
             if (itemPersistence == null)
             {
                 itemPersistence = FindFirstObjectByType<ItemPersistenceCoordinator>();
@@ -186,6 +187,23 @@ namespace TheLastSasak.Systems.Save
             }
 
             File.Move(tempPath, targetPath);
+        }
+
+public static SaveSystem Instance { get; private set; }
+
+public static void SaveNow()
+{
+    if (Instance == null)
+        Instance = FindFirstObjectByType<SaveSystem>();
+
+    Instance?.SaveGame();
+}
+public void AddPermanentHealth(float amount = 0f)
+        {
+            _currentSaveData ??= new TLS_SaveData();
+            _currentSaveData.EnsureValidStructure();
+            _currentSaveData.PlayerProgressionData.PermanentUpgradeIds.Add($"max_health_{amount}");
+            SaveGame();
         }
     }
 }

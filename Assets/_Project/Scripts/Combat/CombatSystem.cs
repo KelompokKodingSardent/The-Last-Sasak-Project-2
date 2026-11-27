@@ -1,4 +1,6 @@
 using UnityEngine;
+using TheLastSasak.Items.Artifact;
+using TheLastSasak.Player.Stats;
 
 public class CombatSystem : MonoBehaviour
 {

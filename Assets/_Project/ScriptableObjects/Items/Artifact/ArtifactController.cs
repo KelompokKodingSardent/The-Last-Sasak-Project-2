@@ -299,5 +299,31 @@ namespace TheLastSasak.Items.Artifact
 
             OnArtifactsChanged?.Invoke();
         }
+
+public void NotifyDodgeSuccess()
+        {
+            // Hook efek pasif artefak saat dodge berhasil
+        }
+
+        public void NotifyDodgeSuccess(object context)
+        {
+            NotifyDodgeSuccess();
+        }
+
+        public void NotifyParrySuccess()
+        {
+            // Hook efek pasif artefak saat parry berhasil
+        }
+
+        public void NotifyParrySuccess(object context)
+        {
+            NotifyParrySuccess();
+        }
+
+        public float EvaluateContextualDamage(float baseDamage, GameObject target = null)
+        {
+            return baseDamage;
+        }
+
     }
 }

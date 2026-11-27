@@ -1,6 +1,6 @@
 // PlayerProgression.cs
 using UnityEngine;
-
+using TheLastSasak.Player.Stats;
 public class PlayerProgression : MonoBehaviour
 {
     public float HealthPerLevel = 8f;

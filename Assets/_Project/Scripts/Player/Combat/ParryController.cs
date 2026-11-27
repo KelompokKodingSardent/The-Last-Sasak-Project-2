@@ -1,7 +1,7 @@
 // ParryController.cs
 using System.Collections;
 using UnityEngine;
-
+using TheLastSasak.Player.Stats;
 public class ParryController : MonoBehaviour
 {
     public float ActiveDuration = 0.2f;
