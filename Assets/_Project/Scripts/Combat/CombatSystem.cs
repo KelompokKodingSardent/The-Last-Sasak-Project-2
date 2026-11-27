@@ -64,11 +64,11 @@ public class CombatSystem : MonoBehaviour
 
 public class CombatResolver : MonoBehaviour
 {
-    ParryResolver parryResolver;
+    private ParryResolver _parryResolver;
 
-    void Awake()
+    private void Awake()
     {
-        parryResolver = GetComponent<ParryResolver>();
+        _parryResolver = GetComponent<ParryResolver>();
     }
 
     public DamageResult Resolve(IDamageable target, DamageInfo info)
@@ -79,14 +79,13 @@ public class CombatResolver : MonoBehaviour
         MonoBehaviour targetBehaviour = target as MonoBehaviour;
         GameObject targetObject = targetBehaviour != null ? targetBehaviour.gameObject : null;
 
-        if (parryResolver != null && targetObject != null &&
-            parryResolver.TryResolve(targetObject, info, out IParryable parryable))
+        if (_parryResolver != null && targetObject != null &&
+            _parryResolver.TryResolve(targetObject, info, out IParryable parryable))
         {
             targetObject.GetComponent<ParryController>()?.OnParrySuccess(info.Instigator);
             targetObject.GetComponent<ArtifactController>()?.NotifyParrySuccess(info.Instigator);
             parryable?.OnParried(targetObject.transform);
-            CameraEventManager.TriggerCameraShake(1.2f);
-            TimeEffectController.Play(0.07f);
+            CombatFeedbackRouter.EmitParryFeedback(targetObject, info.Instigator);
             return DamageResult.Parried();
         }
 
@@ -114,7 +113,8 @@ public class CombatResolver : MonoBehaviour
         {
             if (targetObject != null && info.Stagger > 0f)
                 targetObject.GetComponent<StaggerComponent>()?.Add(info.Stagger);
-            TimeEffectController.Play(0.03f);
+
+            CombatFeedbackRouter.EmitHitFeedback(info, result, targetObject);
         }
 
         return result;

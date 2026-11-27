@@ -113,6 +113,12 @@ namespace TheLastSasak.Player.Stats
 
         private void Start()
         {
+            if (_healthReceiver is Health healthComponent)
+            {
+                bool wasAtFullHealth = Mathf.Approximately(healthComponent.CurrentHealth, healthComponent.MaxHealth);
+                healthComponent.SyncInitialMaxHealth(FinalMaxHealth, fillCurrentToMax: wasAtFullHealth);
+            }
+
             RecalculateStats(notifyHealthReceiver: true);
         }
 

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 
@@ -12,17 +13,17 @@ namespace TheLastSasak.Systems.Save
 
     public class SaveSystem : MonoBehaviour
     {
+        public static SaveSystem Instance { get; private set; }
+
         [Header("File Settings")]
         [SerializeField] private string saveFileName = "tls_save.json";
         [SerializeField] private bool prettyPrintJson = true;
-        [SerializeField] private bool autoLoadOnStart = false;
+        [SerializeField] private bool autoLoadOnStart = true;
 
         [Header("Dependencies")]
         [SerializeField] private ItemPersistenceCoordinator itemPersistence;
 
-        private readonly System.Collections.Generic.List<ISaveableSystem> _externalSaveables =
-            new System.Collections.Generic.List<ISaveableSystem>();
-
+        private readonly List<ISaveableSystem> _externalSaveables = new List<ISaveableSystem>();
         private TLS_SaveData _currentSaveData = new TLS_SaveData();
 
         public event Action<TLS_SaveData> OnGameSaved;
@@ -30,10 +31,18 @@ namespace TheLastSasak.Systems.Save
 
         public string SaveFilePath => Path.Combine(Application.persistentDataPath, saveFileName);
         public TLS_SaveData CurrentSaveData => _currentSaveData;
+        public bool HasLoadedData { get; private set; }
 
         private void Awake()
         {
-            if (Instance == null) Instance = this;
+            if (Instance != null && Instance != this)
+            {
+                Destroy(this);
+                return;
+            }
+
+            Instance = this;
+
             if (itemPersistence == null)
             {
                 itemPersistence = FindFirstObjectByType<ItemPersistenceCoordinator>();
@@ -50,9 +59,18 @@ namespace TheLastSasak.Systems.Save
 
         public void RegisterSaveable(ISaveableSystem saveable)
         {
-            if (saveable != null && !_externalSaveables.Contains(saveable))
+            if (saveable == null)
+                return;
+
+            if (!_externalSaveables.Contains(saveable))
             {
                 _externalSaveables.Add(saveable);
+            }
+
+            // Jika SaveSystem sudah memuat file sebelumnya, langsung sinkronkan komponen yang baru mendaftar
+            if (HasLoadedData && _currentSaveData != null)
+            {
+                saveable.ReadFromSave(_currentSaveData);
             }
         }
 
@@ -93,7 +111,6 @@ namespace TheLastSasak.Systems.Save
                 WriteAtomicText(SaveFilePath, json);
 
                 OnGameSaved?.Invoke(_currentSaveData);
-                Debug.Log($"[SaveSystem] Berhasil menyimpan ke: {SaveFilePath}", this);
                 return true;
             }
             catch (Exception ex)
@@ -114,7 +131,6 @@ namespace TheLastSasak.Systems.Save
 
             try
             {
-                // Langkah 1: Baca JSON
                 string json = File.ReadAllText(SaveFilePath);
                 if (string.IsNullOrWhiteSpace(json))
                 {
@@ -129,28 +145,31 @@ namespace TheLastSasak.Systems.Save
                     return false;
                 }
 
-                // Langkah 2 & 3: Periksa SaveVersion & validasi struktur data
                 if (!SaveVersionMigrator.TryMigrateToLatest(loadedData, out _))
                 {
                     return false;
                 }
 
-                _currentSaveData = loadedData;
+                if (!SaveValidator.IsValid(loadedData))
+                {
+                    Debug.LogError("[SaveSystem] Struktur data save tidak valid.", this);
+                    return false;
+                }
 
-                // Pulihkan sistem eksternal (CurrencyWallet, PlayerProgression, Settings)
+                _currentSaveData = loadedData;
+                HasLoadedData = true;
+
                 for (int i = 0; i < _externalSaveables.Count; i++)
                 {
                     _externalSaveables[i]?.ReadFromSave(_currentSaveData);
                 }
 
-                // Langkah 4–10: Resolusi ItemCatalogSO, Inventory, Equipment, Artifacts & RecalculateStats
                 if (itemPersistence != null)
                 {
                     itemPersistence.ApplyFromSaveData(_currentSaveData);
                 }
 
                 OnGameLoaded?.Invoke(_currentSaveData);
-                Debug.Log("[SaveSystem] Berhasil memuat tls_save.json.", this);
                 return true;
             }
             catch (Exception ex)
@@ -163,6 +182,7 @@ namespace TheLastSasak.Systems.Save
         [ContextMenu("Delete Save File")]
         public void DeleteSaveFile()
         {
+            HasLoadedData = false;
             if (File.Exists(SaveFilePath))
             {
                 File.Delete(SaveFilePath);
@@ -189,21 +209,29 @@ namespace TheLastSasak.Systems.Save
             File.Move(tempPath, targetPath);
         }
 
-public static SaveSystem Instance { get; private set; }
-
-public static void SaveNow()
-{
-    if (Instance == null)
-        Instance = FindFirstObjectByType<SaveSystem>();
-
-    Instance?.SaveGame();
-}
-public void AddPermanentHealth(float amount = 0f)
+        public static void SaveNow()
         {
+            if (Instance == null)
+                Instance = FindFirstObjectByType<SaveSystem>();
+
+            Instance?.SaveGame();
+        }
+
+        public void AddPermanentHealth(float amount = 0f)
+        {
+            if (amount <= 0f)
+                return;
+
             _currentSaveData ??= new TLS_SaveData();
             _currentSaveData.EnsureValidStructure();
             _currentSaveData.PlayerProgressionData.PermanentUpgradeIds.Add($"max_health_{amount}");
             SaveGame();
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this)
+                Instance = null;
         }
     }
 }

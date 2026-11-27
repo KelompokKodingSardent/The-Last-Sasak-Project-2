@@ -5,13 +5,22 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
-    public GameState CurrentGameState { get; private set; } = GameState.MainMenu;
-    public string CombatScene = "CombatTest";
-    public string ForestScene = "ForestRun";
-    public string MenuScene = "MainMenu";
+    [Header("Scene Names")]
+    public string MainMenuScene = "MainMenu";
     public string HubScene = "Hub";
+    public string CombatScene = "CombatTest";
+    public string ForestRunScene = "ForestRun";
 
-    void Awake()
+    public GameState CurrentState { get; private set; } = GameState.MainMenu;
+    public RunId CurrentRunId { get; private set; }
+    public string ActiveRunSceneName { get; private set; }
+
+    private int _runCounter;
+    private string _pendingSceneTarget;
+    private GameState _pendingStateAfterLoad;
+    private bool _hasPendingTransition;
+
+    private void Awake()
     {
         if (Instance != null && Instance != this)
         {
@@ -21,81 +30,170 @@ public class GameManager : MonoBehaviour
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
+
+        Scene activeScene = SceneManager.GetActiveScene();
+        SyncInitialStateFromScene(activeScene.name);
     }
 
-    void Start()
+    private void OnEnable()
     {
-        string scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-        if (scene == "CombatTest" || scene == "ForestRun")
-            SetState(GameState.InRun);
-        else if (scene == "Hub" || scene == "MainMenu")
-            SetState(GameState.MainMenu);
+        GameEvents.OnPlayerDied += HandlePlayerDied;
+        SceneManager.sceneLoaded += HandleSceneLoaded;
     }
 
-    void OnEnable()
+    private void OnDisable()
     {
-        GameEvents.OnPlayerDied += GameOver;
+        GameEvents.OnPlayerDied -= HandlePlayerDied;
+        SceneManager.sceneLoaded -= HandleSceneLoaded;
     }
 
-    void OnDisable()
+    public void SetState(GameState newState)
     {
-        GameEvents.OnPlayerDied -= GameOver;
+        if (CurrentState == newState)
+            return;
+
+        CurrentState = newState;
+        GameEvents.RaiseGameStateChanged(CurrentState);
     }
 
     public void StartGame()
     {
-        ExperienceSystem.Instance?.ResetRun();
-        SetState(GameState.Loading);
-        LoadNamed(CombatScene);
-        SetState(GameState.InRun);
+        BeginRunInScene(CombatScene);
     }
 
-    public void StartForest()
+    public void StartForestRun()
     {
-        ExperienceSystem.Instance?.ResetRun();
-        SetState(GameState.Loading);
-        LoadNamed(ForestScene);
-        SetState(GameState.InRun);
+        BeginRunInScene(ForestRunScene);
     }
 
-    public void OpenHub()
-    {
-        SetState(GameState.MainMenu);
-        LoadNamed(HubScene);
-    }
+public void StartForest() => StartForestRun();
 
-    public void GameOver()
+    public void BeginRunInScene(string runSceneName)
     {
-        if (CurrentGameState == GameState.GameOver)
-            return;
-        SetState(GameState.GameOver);
-    }
+        if (string.IsNullOrWhiteSpace(runSceneName))
+            runSceneName = CombatScene;
 
-    public void ReturnToMainMenu()
-    {
-        SetState(GameState.MainMenu);
-        LoadNamed(MenuScene);
+        EndCurrentRunIfActive(RunEndReason.Restarted);
+
+        ActiveRunSceneName = runSceneName;
+        _runCounter++;
+        CurrentRunId = new RunId(_runCounter);
+
+        if (ExperienceSystem.Instance != null)
+            ExperienceSystem.Instance.ResetRun();
+
+        Time.timeScale = 1f;
+        TransitionToScene(runSceneName, GameState.InRun);
     }
 
     public void RestartRun()
     {
-        StartGame();
+        string targetRunScene = !string.IsNullOrWhiteSpace(ActiveRunSceneName)
+            ? ActiveRunSceneName
+            : SceneManager.GetActiveScene().name;
+
+        if (targetRunScene == MainMenuScene || targetRunScene == HubScene)
+            targetRunScene = CombatScene;
+
+        BeginRunInScene(targetRunScene);
     }
 
-    public static void LoadNamed(string sceneName)
+    public void LoadHub()
     {
-        if (Application.CanStreamedLevelBeLoaded(sceneName))
+        EndCurrentRunIfActive(RunEndReason.AbandonedToHub);
+        Time.timeScale = 1f;
+        TransitionToScene(HubScene, GameState.Hub);
+    }
+
+    public void OpenHub() => LoadHub();
+
+    public void ReturnToMainMenu()
+    {
+        EndCurrentRunIfActive(RunEndReason.AbandonedToMenu);
+        Time.timeScale = 1f;
+        TransitionToScene(MainMenuScene, GameState.MainMenu);
+    }
+
+    public void CompleteRunVictory()
+    {
+        if (CurrentState != GameState.InRun)
+            return;
+
+        EndCurrentRunIfActive(RunEndReason.Completed);
+        SetState(GameState.Victory);
+    }
+
+    private void HandlePlayerDied()
+    {
+        if (CurrentState == GameState.GameOver)
+            return;
+
+        EndCurrentRunIfActive(RunEndReason.PlayerDied);
+        SetState(GameState.GameOver);
+    }
+
+    private void EndCurrentRunIfActive(RunEndReason reason)
+    {
+        if (!CurrentRunId.IsValid)
+            return;
+
+        RunId endedRun = CurrentRunId;
+        CurrentRunId = default;
+        GameEvents.RaiseRunEnded(endedRun, reason);
+    }
+
+    private void TransitionToScene(string sceneName, GameState stateAfterLoad)
+    {
+        _pendingSceneTarget = sceneName;
+        _pendingStateAfterLoad = stateAfterLoad;
+        _hasPendingTransition = true;
+        SceneManager.LoadScene(sceneName);
+    }
+
+    private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (_hasPendingTransition && scene.name == _pendingSceneTarget)
         {
-            SceneManager.LoadScene(sceneName);
+            _hasPendingTransition = false;
+            SetState(_pendingStateAfterLoad);
+
+            if (_pendingStateAfterLoad == GameState.InRun && CurrentRunId.IsValid)
+            {
+                GameEvents.RaiseRunStarted(CurrentRunId, scene.name);
+            }
             return;
         }
 
-        SceneManager.LoadScene($"Assets/_Project/Scenes/{sceneName}.unity");
+        // Mendukung pengujian langsung dari Editor (Play langsung di CombatTest / ForestRun / Hub)
+        SyncInitialStateFromScene(scene.name);
     }
 
-    void SetState(GameState state)
+    private void SyncInitialStateFromScene(string sceneName)
     {
-        CurrentGameState = state;
-        GameEvents.RaiseGameStateChanged(state);
+        if (sceneName == MainMenuScene)
+        {
+            SetState(GameState.MainMenu);
+        }
+        else if (sceneName == HubScene)
+        {
+            SetState(GameState.Hub);
+        }
+        else
+        {
+            ActiveRunSceneName = sceneName;
+            if (!CurrentRunId.IsValid)
+            {
+                _runCounter++;
+                CurrentRunId = new RunId(_runCounter);
+            }
+            SetState(GameState.InRun);
+            GameEvents.RaiseRunStarted(CurrentRunId, sceneName);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+            Instance = null;
     }
 }

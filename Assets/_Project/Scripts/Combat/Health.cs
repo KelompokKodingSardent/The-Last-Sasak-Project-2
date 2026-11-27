@@ -1,23 +1,25 @@
 using System;
 using UnityEngine;
+using TheLastSasak.Player.Stats;
 
-public class Health : MonoBehaviour, IDamageable
+public class Health : MonoBehaviour, IDamageable, IHealthStatReceiver, IPoolable
 {
-    [SerializeField] float maxHealth = 100f;
-    [SerializeField] float currentHealth;
+    [SerializeField] private float maxHealth = 100f;
+    [SerializeField] private float currentHealth;
 
     public float MaxHealth => maxHealth;
     public float CurrentHealth => currentHealth;
     public bool IsDead { get; private set; }
+    public PoolLeaseId CurrentLeaseId { get; private set; }
 
     public event Action<float, float> OnHealthChanged;
     public event Action OnDied;
 
-    InvulnerabilityHandler invulnerability;
+    private InvulnerabilityHandler _invulnerability;
 
-    void Awake()
+    private void Awake()
     {
-        invulnerability = GetComponent<InvulnerabilityHandler>();
+        _invulnerability = GetComponent<InvulnerabilityHandler>();
         if (currentHealth <= 0f)
             currentHealth = maxHealth;
     }
@@ -28,7 +30,39 @@ public class Health : MonoBehaviour, IDamageable
         ResetHealth();
     }
 
-    public void SetMaxHealth(float newMax, bool healDifference = true)
+    public void SyncInitialMaxHealth(float initialMax, bool fillCurrentToMax)
+    {
+        maxHealth = Mathf.Max(1f, initialMax);
+        if (!IsDead)
+        {
+            currentHealth = fillCurrentToMax
+                ? maxHealth
+                : Mathf.Clamp(currentHealth, 1f, maxHealth);
+        }
+
+        OnHealthChanged?.Invoke(currentHealth, maxHealth);
+    }
+
+    public void ApplyMaxHealthChange(float previousMaxHealth, float newMaxHealth, MaxHealthRecalculationPolicy policy)
+    {
+        float clampedMax = Mathf.Max(1f, newMaxHealth);
+        float effectivePrevMax = previousMaxHealth > 0f ? previousMaxHealth : maxHealth;
+        maxHealth = clampedMax;
+
+        if (!IsDead)
+        {
+            float resolved = HealthPolicyUtility.ResolveNewCurrentHealth(
+                currentHealth,
+                effectivePrevMax,
+                maxHealth,
+                policy);
+            currentHealth = Mathf.Clamp(resolved, 1f, maxHealth);
+        }
+
+        OnHealthChanged?.Invoke(currentHealth, maxHealth);
+    }
+
+    public void SetMaxHealth(float newMax, bool healDifference = false)
     {
         float clampedMax = Mathf.Max(1f, newMax);
         float diff = clampedMax - maxHealth;
@@ -52,12 +86,23 @@ public class Health : MonoBehaviour, IDamageable
         OnHealthChanged?.Invoke(currentHealth, maxHealth);
     }
 
+    public void OnRentFromPool(PoolLeaseId leaseId)
+    {
+        CurrentLeaseId = leaseId;
+        ResetHealth();
+    }
+
+    public void OnReturnToPool()
+    {
+        CurrentLeaseId = default;
+    }
+
     public DamageResult TakeDamage(DamageInfo damageInfo)
     {
         if (IsDead)
             return DamageResult.Ignored;
 
-        if (invulnerability != null && invulnerability.IsInvulnerable)
+        if (_invulnerability != null && _invulnerability.IsInvulnerable)
             return DamageResult.Blocked;
 
         currentHealth = Mathf.Max(0f, currentHealth - damageInfo.Amount);

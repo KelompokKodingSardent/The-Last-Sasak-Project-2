@@ -1,40 +1,62 @@
-// PlayerProgression.cs
 using UnityEngine;
 using TheLastSasak.Player.Stats;
+
 public class PlayerProgression : MonoBehaviour
 {
     public float HealthPerLevel = 8f;
-    Health health;
-    PlayerStatController statController;
-    int appliedLevel = 1;
 
-    void Awake()
+    private Health _health;
+    private PlayerStatController _statController;
+    private int _appliedLevel = 1;
+
+    private void Awake()
     {
-        health = GetComponent<Health>();
-        statController = GetComponent<PlayerStatController>();
+        _health = GetComponent<Health>();
+        _statController = GetComponent<PlayerStatController>();
     }
 
-    void OnEnable()
+    private void OnEnable()
     {
-        GameEvents.OnExperienceChanged += Handle;
+        GameEvents.OnExperienceChanged += HandleExperienceChanged;
     }
 
-    void OnDisable()
+    private void OnDisable()
     {
-        GameEvents.OnExperienceChanged -= Handle;
+        GameEvents.OnExperienceChanged -= HandleExperienceChanged;
     }
 
-    void Handle(int exp, int level)
+    private void Start()
     {
-        if (level <= appliedLevel)
+        if (ExperienceSystem.Instance != null)
+        {
+            HandleExperienceChanged(ExperienceSystem.Instance.CurrentExp, ExperienceSystem.Instance.Level);
+        }
+    }
+
+    private void HandleExperienceChanged(int exp, int level)
+    {
+        int clampedLevel = Mathf.Max(1, level);
+
+        // Reset bonus level saat run baru dimulai ulang (level kembali ke 1)
+        if (clampedLevel < _appliedLevel)
+        {
+            _appliedLevel = clampedLevel;
+            float resetBonus = HealthPerLevel * (_appliedLevel - 1);
+            if (_statController != null)
+                _statController.SetRunLevelHealthBonus(resetBonus);
+            return;
+        }
+
+        if (clampedLevel == _appliedLevel)
             return;
 
-        appliedLevel = level;
-        float totalLevelBonus = HealthPerLevel * (appliedLevel - 1);
+        int levelDiff = clampedLevel - _appliedLevel;
+        _appliedLevel = clampedLevel;
+        float totalLevelBonus = HealthPerLevel * (_appliedLevel - 1);
 
-        if (statController != null)
-            statController.SetRunLevelHealthBonus(totalLevelBonus);
-        else if (health != null)
-            health.SetMaxHealth(health.MaxHealth + HealthPerLevel, healDifference: true);
+        if (_statController != null)
+            _statController.SetRunLevelHealthBonus(totalLevelBonus);
+        else if (_health != null)
+            _health.SetMaxHealth(_health.MaxHealth + (HealthPerLevel * levelDiff), healDifference: false);
     }
 }

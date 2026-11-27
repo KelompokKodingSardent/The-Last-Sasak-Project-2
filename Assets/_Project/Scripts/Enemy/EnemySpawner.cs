@@ -1,6 +1,7 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
-using System.Collections;
 
 public class EnemySpawner : MonoBehaviour
 {
@@ -12,9 +13,9 @@ public class EnemySpawner : MonoBehaviour
     public float spawnInterval = 3f;
     public bool AutoSpawn;
 
-    int alive;
+    private readonly HashSet<Health> _trackedAlive = new HashSet<Health>();
 
-    void Start()
+    private void Start()
     {
         if (playerTransform == null)
         {
@@ -27,17 +28,29 @@ public class EnemySpawner : MonoBehaviour
             StartCoroutine(SpawnRoutine());
     }
 
-    IEnumerator SpawnRoutine()
+    private void OnEnable()
+    {
+        GameEvents.OnEntityDied += HandleEntityDied;
+    }
+
+    private void OnDisable()
+    {
+        GameEvents.OnEntityDied -= HandleEntityDied;
+        _trackedAlive.Clear();
+    }
+
+    private IEnumerator SpawnRoutine()
     {
         while (true)
         {
             yield return new WaitForSeconds(spawnInterval);
-            if (alive < maxEnemies)
+            PruneInvalidEntries();
+            if (_trackedAlive.Count < maxEnemies)
                 SpawnEnemy();
         }
     }
 
-    void SpawnEnemy()
+    public void SpawnEnemy()
     {
         if (enemyPrefab == null || playerTransform == null)
             return;
@@ -57,14 +70,19 @@ public class EnemySpawner : MonoBehaviour
             ? ObjectPoolManager.Instance.Get(enemyPrefab, hit.position, Quaternion.identity)
             : Instantiate(enemyPrefab, hit.position, Quaternion.identity);
 
-        alive++;
         Health health = instance.GetComponent<Health>();
         if (health != null)
-            health.OnDied += HandleDeath;
+            _trackedAlive.Add(health);
     }
 
-    void HandleDeath()
+    private void HandleEntityDied(Health health)
     {
-        alive = Mathf.Max(0, alive - 1);
+        if (health != null)
+            _trackedAlive.Remove(health);
+    }
+
+    private void PruneInvalidEntries()
+    {
+        _trackedAlive.RemoveWhere(h => h == null || h.IsDead || !h.gameObject.activeInHierarchy);
     }
 }

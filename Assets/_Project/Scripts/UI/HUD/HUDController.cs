@@ -57,8 +57,7 @@ public class HUDController : MonoBehaviour
         if (ExpLabel != null)
             ExpLabel.text = $"Lv {level}  EXP {exp}";
     }
-
-    void HandleCleared()
+void HandleCleared(RoomController room)
     {
         if (RoomLabel != null)
             RoomLabel.text = "Room Cleared";

@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class Projectile : MonoBehaviour, IParryable
+public class Projectile : MonoBehaviour, IParryable, IPoolable
 {
     public float Speed = 10f;
     public float Damage = 8f;
@@ -10,51 +10,77 @@ public class Projectile : MonoBehaviour, IParryable
     public GameObject Owner;
     public bool FromPlayer;
 
-    Vector3 direction;
-    float currentSpeed;
-    float age;
-    bool spent;
-    Collider col;
-    TrailRenderer trail;
+    public PoolLeaseId CurrentLeaseId { get; private set; }
 
-    void Awake()
+    private Vector3 _direction;
+    private float _currentSpeed;
+    private float _age;
+    private bool _spent;
+    private Collider _col;
+    private TrailRenderer _trail;
+
+    private void Awake()
     {
-        col = GetComponent<Collider>();
-        if (col != null)
-            col.isTrigger = true;
-        trail = GetComponentInChildren<TrailRenderer>();
+        _col = GetComponent<Collider>();
+        if (_col != null)
+            _col.isTrigger = true;
+        _trail = GetComponentInChildren<TrailRenderer>(true);
+    }
+
+    public void OnRentFromPool(PoolLeaseId leaseId)
+    {
+        CurrentLeaseId = leaseId;
+        _age = 0f;
+        _spent = false;
+        if (_trail != null)
+            _trail.Clear();
+    }
+
+    public void OnReturnToPool()
+    {
+        CurrentLeaseId = default;
+        Owner = null;
+        FromPlayer = false;
+        _spent = true;
+        _age = 0f;
+        if (_trail != null)
+            _trail.Clear();
     }
 
     public void Launch(Vector3 dir, GameObject owner, bool fromPlayer, float damage)
     {
-        direction = dir.sqrMagnitude > 0.01f ? dir.normalized : Vector3.forward;
+        _direction = dir.sqrMagnitude > 0.01f ? dir.normalized : Vector3.forward;
         Owner = owner;
         FromPlayer = fromPlayer;
         Damage = damage;
-        currentSpeed = Speed;
-        age = 0f;
-        spent = false;
+        _currentSpeed = Speed;
+        _age = 0f;
+        _spent = false;
 
-        if (trail != null)
-            trail.Clear();
+        if (_trail != null)
+            _trail.Clear();
 
-        gameObject.SetActive(true);
+        if (!gameObject.activeSelf)
+            gameObject.SetActive(true);
     }
 
-    void Update()
+    private void Update()
     {
-        transform.position += direction * currentSpeed * Time.deltaTime;
-        if (direction.sqrMagnitude > 0.01f)
-            transform.forward = direction;
+        if (_spent)
+            return;
 
-        age += Time.deltaTime;
-        if (age >= Life)
+        transform.position += _direction * _currentSpeed * Time.deltaTime;
+        if (_direction.sqrMagnitude > 0.01f)
+            transform.forward = _direction;
+
+        _age += Time.deltaTime;
+        if (_age >= Life)
             Despawn();
     }
 
-    void OnTriggerEnter(Collider other)
+    private void OnTriggerEnter(Collider other)
     {
-        if (spent || other == null)
+        if (_spent || other == null)
             return;
 
         if (Owner != null && (other.gameObject == Owner || other.transform.IsChildOf(Owner.transform)))
@@ -63,7 +89,6 @@ public class Projectile : MonoBehaviour, IParryable
         int envLayer = GameplayLayers.Environment;
         if (envLayer >= 0 && other.gameObject.layer == envLayer && !other.isTrigger)
         {
-            spent = true;
             Despawn();
             return;
         }
@@ -82,7 +107,6 @@ public class Projectile : MonoBehaviour, IParryable
                 if (result.Outcome == DamageOutcome.Parried)
                     return;
 
-                spent = true;
                 Despawn();
             }
             return;
@@ -94,50 +118,55 @@ public class Projectile : MonoBehaviour, IParryable
             DamageInfo info = DamageInfo.Create(Damage, Owner != null ? Owner : gameObject, false);
             info.Stagger = 15f;
             CombatSystem.Instance?.ApplyDamage(other, info);
-            spent = true;
             Despawn();
         }
     }
 
     public void OnParried(Transform parrySource)
     {
+        if (_spent)
+            return;
+
         GameObject originalShooter = Owner;
         FromPlayer = true;
         Owner = parrySource != null ? parrySource.gameObject : Owner;
         Damage *= DeflectDamageMultiplier;
-        currentSpeed = Speed * DeflectSpeedMultiplier;
-        spent = false;
-        age = 0f;
+        _currentSpeed = Speed * DeflectSpeedMultiplier;
+        _spent = false;
+        _age = 0f;
 
         if (parrySource != null)
         {
             PlayerFacingController facing = parrySource.GetComponent<PlayerFacingController>();
             if (facing != null)
             {
-                direction = facing.GetAimDirection();
+                _direction = facing.GetAimDirection();
             }
             else if (originalShooter != null)
             {
                 Vector3 toShooter = originalShooter.transform.position - transform.position;
                 toShooter.y = 0f;
-                direction = toShooter.sqrMagnitude > 0.01f ? toShooter.normalized : -direction;
+                _direction = toShooter.sqrMagnitude > 0.01f ? toShooter.normalized : -_direction;
             }
             else
             {
-                direction = -direction;
+                _direction = -_direction;
             }
         }
         else
         {
-            direction = -direction;
+            _direction = -_direction;
         }
     }
 
-    void Despawn()
+    private void Despawn()
     {
+        if (_spent)
+            return;
+
+        _spent = true;
         Owner = null;
         FromPlayer = false;
-        spent = true;
 
         if (ObjectPoolManager.Instance != null)
             ObjectPoolManager.Instance.Release(gameObject);
