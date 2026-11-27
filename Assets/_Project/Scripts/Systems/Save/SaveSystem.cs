@@ -2,84 +2,190 @@ using System;
 using System.IO;
 using UnityEngine;
 
-[Serializable]
-public class SaveData
+namespace TheLastSasak.Systems.Save
 {
-    public int SaveVersion = 1;
-    public int SoulsCoin;
-    public float PermanentHealthBonus;
-}
-
-public class SaveSystem : MonoBehaviour
-{
-    public static SaveSystem Instance { get; private set; }
-    const string FileName = "tls_save.json";
-
-    void Awake()
+    public interface ISaveableSystem
     {
-        if (Instance != null && Instance != this)
+        void WriteToSave(TLS_SaveData data);
+        void ReadFromSave(TLS_SaveData data);
+    }
+
+    public class SaveSystem : MonoBehaviour
+    {
+        [Header("File Settings")]
+        [SerializeField] private string saveFileName = "tls_save.json";
+        [SerializeField] private bool prettyPrintJson = true;
+        [SerializeField] private bool autoLoadOnStart = false;
+
+        [Header("Dependencies")]
+        [SerializeField] private ItemPersistenceCoordinator itemPersistence;
+
+        private readonly System.Collections.Generic.List<ISaveableSystem> _externalSaveables =
+            new System.Collections.Generic.List<ISaveableSystem>();
+
+        private TLS_SaveData _currentSaveData = new TLS_SaveData();
+
+        public event Action<TLS_SaveData> OnGameSaved;
+        public event Action<TLS_SaveData> OnGameLoaded;
+
+        public string SaveFilePath => Path.Combine(Application.persistentDataPath, saveFileName);
+        public TLS_SaveData CurrentSaveData => _currentSaveData;
+
+        private void Awake()
         {
-            Destroy(this);
-            return;
+            if (itemPersistence == null)
+            {
+                itemPersistence = FindFirstObjectByType<ItemPersistenceCoordinator>();
+            }
         }
 
-        Instance = this;
-        Apply(Load());
-    }
-
-    public static void SaveNow()
-    {
-        Instance?.Save();
-    }
-
-    public void Save()
-    {
-        SaveData data = new SaveData
+        private void Start()
         {
-            SaveVersion = SaveValidator.CurrentVersion,
-            SoulsCoin = CurrencyWallet.Instance != null ? CurrencyWallet.Instance.SoulsCoin : 0,
-            PermanentHealthBonus = PermanentHealth
-        };
-
-        File.WriteAllText(Path(), JsonUtility.ToJson(data));
-    }
-
-    public float PermanentHealth { get; private set; }
-
-    public SaveData Load()
-    {
-        string path = Path();
-        if (!File.Exists(path))
-            return new SaveData();
-
-        try
-        {
-            SaveData data = JsonUtility.FromJson<SaveData>(File.ReadAllText(path));
-            return SaveValidator.IsValid(data) ? data : new SaveData();
+            if (autoLoadOnStart && HasSaveFile())
+            {
+                LoadGame();
+            }
         }
-        catch
+
+        public void RegisterSaveable(ISaveableSystem saveable)
         {
-            return new SaveData();
+            if (saveable != null && !_externalSaveables.Contains(saveable))
+            {
+                _externalSaveables.Add(saveable);
+            }
         }
-    }
 
-    void Apply(SaveData data)
-    {
-        PermanentHealth = data.PermanentHealthBonus;
-        CurrencyWallet.Instance?.Set(data.SoulsCoin);
-    }
+        public void UnregisterSaveable(ISaveableSystem saveable)
+        {
+            if (saveable != null)
+            {
+                _externalSaveables.Remove(saveable);
+            }
+        }
 
-    public void AddPermanentHealth(float amount)
-    {
-        PermanentHealth += amount;
-        Save();
-    }
+        public bool HasSaveFile()
+        {
+            return File.Exists(SaveFilePath);
+        }
 
-    static string Path() => System.IO.Path.Combine(Application.persistentDataPath, FileName);
+        [ContextMenu("Save Game")]
+        public bool SaveGame()
+        {
+            try
+            {
+                _currentSaveData ??= new TLS_SaveData();
+                _currentSaveData.SaveVersion = TLS_SaveData.LatestSaveVersion;
+                _currentSaveData.LastSavedUtc = DateTime.UtcNow.ToString("o");
+                _currentSaveData.EnsureValidStructure();
 
-    void OnDestroy()
-    {
-        if (Instance == this)
-            Instance = null;
+                for (int i = 0; i < _externalSaveables.Count; i++)
+                {
+                    _externalSaveables[i]?.WriteToSave(_currentSaveData);
+                }
+
+                if (itemPersistence != null)
+                {
+                    itemPersistence.CaptureToSaveData(_currentSaveData);
+                }
+
+                string json = JsonUtility.ToJson(_currentSaveData, prettyPrintJson);
+                WriteAtomicText(SaveFilePath, json);
+
+                OnGameSaved?.Invoke(_currentSaveData);
+                Debug.Log($"[SaveSystem] Berhasil menyimpan ke: {SaveFilePath}", this);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[SaveSystem] Gagal menyimpan game: {ex.Message}", this);
+                return false;
+            }
+        }
+
+        [ContextMenu("Load Game")]
+        public bool LoadGame()
+        {
+            if (!HasSaveFile())
+            {
+                Debug.LogWarning($"[SaveSystem] File save tidak ditemukan di: {SaveFilePath}", this);
+                return false;
+            }
+
+            try
+            {
+                // Langkah 1: Baca JSON
+                string json = File.ReadAllText(SaveFilePath);
+                if (string.IsNullOrWhiteSpace(json))
+                {
+                    Debug.LogError("[SaveSystem] File tls_save.json kosong.", this);
+                    return false;
+                }
+
+                TLS_SaveData loadedData = JsonUtility.FromJson<TLS_SaveData>(json);
+                if (loadedData == null)
+                {
+                    Debug.LogError("[SaveSystem] Gagal parse JSON tls_save.json.", this);
+                    return false;
+                }
+
+                // Langkah 2 & 3: Periksa SaveVersion & validasi struktur data
+                if (!SaveVersionMigrator.TryMigrateToLatest(loadedData, out _))
+                {
+                    return false;
+                }
+
+                _currentSaveData = loadedData;
+
+                // Pulihkan sistem eksternal (CurrencyWallet, PlayerProgression, Settings)
+                for (int i = 0; i < _externalSaveables.Count; i++)
+                {
+                    _externalSaveables[i]?.ReadFromSave(_currentSaveData);
+                }
+
+                // Langkah 4–10: Resolusi ItemCatalogSO, Inventory, Equipment, Artifacts & RecalculateStats
+                if (itemPersistence != null)
+                {
+                    itemPersistence.ApplyFromSaveData(_currentSaveData);
+                }
+
+                OnGameLoaded?.Invoke(_currentSaveData);
+                Debug.Log("[SaveSystem] Berhasil memuat tls_save.json.", this);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[SaveSystem] Gagal memuat game: {ex.Message}", this);
+                return false;
+            }
+        }
+
+        [ContextMenu("Delete Save File")]
+        public void DeleteSaveFile()
+        {
+            if (File.Exists(SaveFilePath))
+            {
+                File.Delete(SaveFilePath);
+                Debug.Log($"[SaveSystem] File save dihapus: {SaveFilePath}", this);
+            }
+        }
+
+        private static void WriteAtomicText(string targetPath, string content)
+        {
+            string directory = Path.GetDirectoryName(targetPath);
+            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            string tempPath = targetPath + ".tmp";
+            File.WriteAllText(tempPath, content);
+
+            if (File.Exists(targetPath))
+            {
+                File.Delete(targetPath);
+            }
+
+            File.Move(tempPath, targetPath);
+        }
     }
 }

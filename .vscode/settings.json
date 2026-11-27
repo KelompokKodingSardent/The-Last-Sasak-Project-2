@@ -67,5 +67,6 @@
         "*.sln": "*.csproj",
         "*.slnx": "*.csproj"
     },
-    "dotnet.defaultSolution": "The-Last-Sasak-Project-2.slnx"
+    "dotnet.defaultSolution": "The-Last-Sasak-Project-2.slnx",
+    "discord.enabled": true
 }

@@ -582,7 +582,8 @@ MonoBehaviour:
   Artifact: {fileID: 0}
   DamageMultiplier: 1
   HealthBonus: 0
-  EquippedGameplayArtifacts: []
+  EquippedGameplayArtifacts:
+  - {fileID: 11400000, guid: 5628e8be64531a545931ef8792082df8, type: 2}
   currentComboStacks: 0
   activeCounterTimer: 0
   totalContextualMultiplier: 1
@@ -612,10 +613,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5e9022d68fb6e514085008c97efe9526, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EquipmentController
-  WeaponSlot1: {fileID: 0}
+  WeaponSlot1: {fileID: 11400000, guid: 3e3212c861fa4024dbeae171ef196b39, type: 2}
   WeaponSlot2: {fileID: 0}
   activeWeaponSlot: 0
-  EquippedArmor: {fileID: 0}
+  EquippedArmor: {fileID: 11400000, guid: 39469c24846b20749b9a072c6125bfac, type: 2}
   weaponSocket: {fileID: 0}
   armorRenderer: {fileID: 0}
   Loadout: []
