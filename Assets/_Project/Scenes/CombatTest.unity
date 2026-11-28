@@ -230,24 +230,29 @@ GameObject:
   - component: {fileID: 200007}
   - component: {fileID: 200008}
   - component: {fileID: 200009}
+  - component: {fileID: 35355499}
   - component: {fileID: 200010}
   - component: {fileID: 200011}
-  - component: {fileID: 200012}
-  - component: {fileID: 200013}
-  - component: {fileID: 200014}
-  - component: {fileID: 200015}
-  - component: {fileID: 200016}
-  - component: {fileID: 200017}
+  - component: {fileID: 200020}
   - component: {fileID: 200018}
   - component: {fileID: 200019}
-  - component: {fileID: 200020}
+  - component: {fileID: 200015}
+  - component: {fileID: 200016}
+  - component: {fileID: 200014}
+  - component: {fileID: 200013}
   - component: {fileID: 200021}
-  - component: {fileID: 200022}
+  - component: {fileID: 35355498}
+  - component: {fileID: 35355497}
+  - component: {fileID: 200027}
+  - component: {fileID: 35355496}
+  - component: {fileID: 35355495}
+  - component: {fileID: 35355494}
+  - component: {fileID: 35355493}
+  - component: {fileID: 35355492}
+  - component: {fileID: 200012}
   - component: {fileID: 200023}
   - component: {fileID: 200024}
-  - component: {fileID: 200025}
-  - component: {fileID: 200026}
-  - component: {fileID: 200027}
+  - component: {fileID: 35355491}
   - component: {fileID: 35355490}
   m_Layer: 8
   m_Name: Player
@@ -382,7 +387,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6c304a994663210469aa24c54e314d53, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMotor
-  Config: {fileID: 0}
+  Config: {fileID: 11400000, guid: 47531088e1bd21546a13322ee1d5dc48, type: 2}
   CanMove: 1
 --- !u!114 &200011
 MonoBehaviour:
@@ -396,7 +401,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 29286069ed5055d4db17d880939f7e66, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerFacingController
-  Config: {fileID: 0}
+  Config: {fileID: 11400000, guid: 47531088e1bd21546a13322ee1d5dc48, type: 2}
 --- !u!114 &200012
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -460,18 +465,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b16d987a1ce6734469ebf2a0d8fe5887, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HitboxController
---- !u!114 &200017
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 200004}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b0b3b9106f1c394489df003ae87444e1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerActionController
 --- !u!114 &200018
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -511,7 +504,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 23757eda9fd0539448a6ea8dca0b1226, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AttackController
-  Definition: {fileID: 0}
+  Definition: {fileID: 11400000, guid: f575d1a1bb7f7bb4bbc7c9a957ccbbf2, type: 2}
   AttackPoint: {fileID: 200031}
   TargetMask:
     serializedVersion: 2
@@ -528,19 +521,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7f26c28e8f0a3064bab942124da06c2d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerDeathHandler
---- !u!114 &200022
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 200004}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 37ca374dde46ad442b047bd6a1dab115, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Inventory
-  Capacity: 20
 --- !u!114 &200023
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -561,46 +541,12 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 200004}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 55d779f50e4ce8e448b7b91155d6dda5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerProgression
   HealthPerLevel: 8
---- !u!114 &200025
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 200004}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: eff144286cdd95e45b27fff22e7045ea, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ArtifactController
-  Artifact: {fileID: 0}
-  DamageMultiplier: 1
-  HealthBonus: 0
-  EquippedGameplayArtifacts:
-  - {fileID: 11400000, guid: 5628e8be64531a545931ef8792082df8, type: 2}
-  currentComboStacks: 0
-  activeCounterTimer: 0
-  totalContextualMultiplier: 1
---- !u!114 &200026
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 200004}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 17177c5c00b955143b18b118bc98bd4b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ItemSwitching
-  Attacks: []
-  Index: 0
 --- !u!114 &200027
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -613,13 +559,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5e9022d68fb6e514085008c97efe9526, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EquipmentController
-  WeaponSlot1: {fileID: 11400000, guid: 3e3212c861fa4024dbeae171ef196b39, type: 2}
-  WeaponSlot2: {fileID: 0}
-  activeWeaponSlot: 0
-  EquippedArmor: {fileID: 11400000, guid: 39469c24846b20749b9a072c6125bfac, type: 2}
-  weaponSocket: {fileID: 0}
+  initialWeaponSlot1: {fileID: 0}
+  initialWeaponSlot2: {fileID: 0}
+  initialArmor: {fileID: 0}
+  weaponSlot1Visual: {fileID: 0}
+  weaponSlot2Visual: {fileID: 0}
   armorRenderer: {fileID: 0}
-  Loadout: []
+  loadout: []
 --- !u!1 &200028
 GameObject:
   m_ObjectHideFlags: 0
@@ -736,9 +682,9 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 50
-  orthographic: 0
-  orthographic size: 5
+  field of view: 51.3
+  orthographic: 1
+  orthographic size: 7
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -770,8 +716,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 200032}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.45025432, y: 0, z: 0, w: 0.89290035}
-  m_LocalPosition: {x: 0, y: 13.4, z: -9}
+  m_LocalRotation: {x: 0.35355338, y: 0.35355338, z: -0.1464466, w: 0.8535535}
+  m_LocalPosition: {x: -8, y: 12.799999, z: -8}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -921,8 +867,8 @@ MonoBehaviour:
     LookAtTarget: {fileID: 0}
     CustomLookAtTarget: 0
   Lens:
-    FieldOfView: 50
-    OrthographicSize: 5
+    FieldOfView: 51.3
+    OrthographicSize: 7
     NearClipPlane: 0.3
     FarClipPlane: 1000
     Dutch: 0
@@ -948,13 +894,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 200039}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.45025432, y: 0, z: 0, w: 0.89290035}
-  m_LocalPosition: {x: 0, y: 13.4, z: -9}
+  m_LocalRotation: {x: 0.35355338, y: 0.35355338, z: -0.1464466, w: 0.8535535}
+  m_LocalPosition: {x: -8, y: 12.799999, z: -8}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 53.52, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 45, y: 45, z: 0}
 --- !u!114 &200042
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -969,11 +915,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineFollow
   TrackerSettings:
     BindingMode: 4
-    PositionDamping: {x: 0.8, y: 0.8, z: 0.8}
+    PositionDamping: {x: 0.3, y: 0.3, z: 0.3}
     AngularDampingMode: 0
     RotationDamping: {x: 1, y: 1, z: 1}
     QuaternionDamping: 1
-  FollowOffset: {x: 0, y: 12, z: -9}
+  FollowOffset: {x: -8, y: 11.4, z: -8}
 --- !u!114 &200043
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2714,10 +2660,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b34aa45c56f348b40824f3bdc45fbdae, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
-  CombatScene: CombatTest
-  ForestScene: ForestRun
-  MenuScene: MainMenu
+  MainMenuScene: MainMenu
   HubScene: Hub
+  CombatScene: CombatTest
+  ForestRunScene: ForestRun
 --- !u!1 &200126
 GameObject:
   m_ObjectHideFlags: 0
@@ -2819,6 +2765,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6dfebf05de12da740ab3eae75d949e34, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ObjectPoolManager
+  poolCatalog: {fileID: 0}
+  poolRootContainer: {fileID: 0}
 --- !u!1 &200134
 GameObject:
   m_ObjectHideFlags: 0
@@ -3089,6 +3037,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 97dc9fd54b2388a4ba2e38ca46df6133, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TimeEffectController
+  minHitstopDuration: 0.01
+  maxHitstopDuration: 0.25
+  defaultHitstopScale: 0.04
 --- !u!1 &200152
 GameObject:
   m_ObjectHideFlags: 0
@@ -3133,6 +3084,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a523361344d0cfe47884ce72f046ee05, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SaveSystem
+  saveFileName: tls_save.json
+  prettyPrintJson: 1
+  autoLoadOnStart: 1
+  itemPersistence: {fileID: 0}
 --- !u!1 &200155
 GameObject:
   m_ObjectHideFlags: 0
@@ -3366,7 +3321,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8d43ff13a90b0764697eb35dcfc8f9c3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InventoryUI
-  Label: {fileID: 1083833111}
+  inventory: {fileID: 0}
+  equipmentController: {fileID: 0}
+  artifactController: {fileID: 0}
+  slotGridContainer: {fileID: 0}
+  slotPrefab: {fileID: 0}
+  categoryFilter: {fileID: 0}
+  itemDetailUI: {fileID: 0}
+  statComparisonUI: {fileID: 0}
+  capacityCounterText: {fileID: 0}
 --- !u!1 &200167
 GameObject:
   m_ObjectHideFlags: 0
@@ -4366,6 +4329,147 @@ CapsuleCollider:
   m_Height: 2
   m_Direction: 1
   m_Center: {x: 0, y: 1, z: 0}
+--- !u!114 &35355491
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 200004}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: caa49a6fd74a75d41bf67483ced22e86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TheLastSasak.Items.Equipment.PlayerActionGateAdapter
+  lockEquipmentActionsInEditor: 0
+--- !u!114 &35355492
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 200004}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 545952c440f1420418a091052d84015d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TheLastSasak.Items.Equipment.EquipmentVisualController
+  equipmentController: {fileID: 0}
+  weaponSlot01Root: {fileID: 0}
+  weaponSlot02Root: {fileID: 0}
+  slot01Visuals: []
+  slot02Visuals: []
+  armorRenderers: []
+  defaultArmorMaterial: {fileID: 0}
+  armorVisuals: []
+--- !u!114 &35355493
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 200004}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b6d884e7a9d34a94f92f8f1522a4ae18, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TheLastSasak.Items.Loot.LootCollector
+  inventory: {fileID: 35355497}
+  currencyWalletComponent: {fileID: 0}
+  experienceSystemComponent: {fileID: 0}
+--- !u!114 &35355494
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 200004}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32d723c6a99ec6c4eba392500efce2a8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TheLastSasak.Items.Equipment.ItemSwitching
+  equipmentController: {fileID: 0}
+  enableLegacyKeyFallback: 0
+--- !u!114 &35355495
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 200004}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d33464bf95bdbbc458271d44543f40df, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TheLastSasak.Items.Equipment.EquipmentTransactionHandler
+  inventory: {fileID: 35355497}
+  equipmentController: {fileID: 200027}
+  artifactController: {fileID: 35355496}
+--- !u!114 &35355496
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 200004}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c69ad884d0d4fc408dbdb7180c070b7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TheLastSasak.Items.Artifact.ArtifactController
+  maxArtifactSlots: 4
+  startingArtifacts: []
+  allowEquipWithoutInventoryInEditor: 1
+  equippedArtifacts: []
+--- !u!114 &35355497
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 200004}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71d786df212f1694ba193bbe9e6c3b57, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TheLastSasak.Items.Inventory.Inventory
+  capacity: 20
+  allowDuplicateEquipment: 0
+  startingItems: []
+--- !u!114 &35355498
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 200004}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a4b48d893c88d514bb2d3968941d7e1c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TheLastSasak.Player.Stats.PlayerStatController
+  baseStatsAsset: {fileID: 11400000, guid: 94f5858965ae8bb40b3f08525c21a6a0, type: 2}
+  fallbackMaxHealth: 100
+  fallbackAttackDamage: 25
+  fallbackAttackSpeed: 1
+  fallbackMoveSpeed: 5
+  fallbackStaminaRegen: 15
+  equipmentController: {fileID: 0}
+  artifactController: {fileID: 0}
+  maxHealthPolicy: 0
+--- !u!114 &35355499
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 200004}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0b3b9106f1c394489df003ae87444e1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerActionController
 --- !u!114 &215189738
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4530,6 +4634,10 @@ PrefabInstance:
     - target: {fileID: 100326, guid: 8f0565f23a2b58541a475bd3c1393052, type: 3}
       propertyPath: m_Name
       value: unitychan
+      objectReference: {fileID: 0}
+    - target: {fileID: 100326, guid: 8f0565f23a2b58541a475bd3c1393052, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 400326, guid: 8f0565f23a2b58541a475bd3c1393052, type: 3}
       propertyPath: m_LocalPosition.x
